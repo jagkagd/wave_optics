@@ -43,5 +43,6 @@ Temporary Items
 .apdisk
 
 # vim unchanged files
-.un~
-.*~
+*.un~
+*.js~
+*.html~
