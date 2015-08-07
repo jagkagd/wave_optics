@@ -1,0 +1,294 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>波动光学模拟</title>
+        <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='sty.css')}}">
+    </head>
+    <body>
+        <script type="text/javascript" src="{{url_for('static', filename='jquery.min.js') }}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='three.min.js') }}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='control.js') }}"></script>
+        
+        <script type="text/javascript">
+        var classInheritDict = {{classInheritForJS|tojson}};
+        var rDict = {{rDict|tojson}};
+        var elemListElement = new Array()
+        var threeList = new Array();
+        var ttlz = 0, w = 0;
+        var scene, renderer, camera;
+        var groupFlag = 0;
+        function updateThree(){
+            ttlz = 0;
+            for(var i = 0; i < threeList.length; i++){
+                scene.remove(threeList[i]);
+            }
+            threeList = new Array();
+            for(var i = 0; i < elemListElement.length; i++){
+                w = 0;
+                var m = createObject(i, elemListElement[i]);
+                scene.add(m);
+                m.position.z = (ttlz + w) / 3;
+                threeList.push(m);
+            }
+            renderer.render(scene, camera);
+        }
+        
+        function createObject(i, obj){
+            var geom, material, map;
+            if(obj.length === 0){
+                
+            }else if($.inArray(obj[0], ['PlaneWave']) > -1){
+                geom = new THREE.PlaneGeometry(50, 50);
+                material = new THREE.MeshLambertMaterial();
+            }else if($.inArray(obj[0], ['SphereWave']) > -1){
+                geom = new THREE.SphereGeometry(2);
+                material = new THREE.MeshLambertMaterial();
+                w = obj[1]['pos'][2];
+            }else if($.inArray(obj[0], ['SimpleFreeSpace']) > -1){
+                geom = new THREE.Geometry();
+                geom.vertices.push(new THREE.Vector3(0, 0, -obj[1]['z']));
+                geom.vertices.push(new THREE.Vector3(0, 0, 0));
+                ttlz += obj[1]['z'];
+                material = new THREE.LineBasicMaterial();
+            }else{
+                geom = new THREE.PlaneGeometry(50, 50);
+                map1 = new THREE.ImageUtils.loadTexture('/texture/' + i.toString() + '.png?' + parseInt(Math.random() * 1000000 + 1).toString());
+                material = new THREE.MeshBasicMaterial({map: map1, side: THREE.DoubleSide});
+            }
+            var mesh = new THREE.Mesh(geom, material);
+            return mesh;
+        }
+                
+        $(document).ready(function(){
+            $('.addButton').hide();
+            $('.listButton').hide();
+            $('#groupList').hide();
+            $("#nav ul li ul").hide();
+            $("#nav ul li").click(function(e) {
+              $(this).children("ul").slideToggle();
+              e.stopPropagation();
+            });
+            $('.chooseChildItem').click(function(){
+                $('.listButton').hide();
+                var chooseId = $(this).attr('id');
+                var chooseBaseId = $(this).parent().parent().attr('id');
+                $('#setPara').attr('name', chooseId);
+                var $table = $('#setPara');
+                $table.empty();
+                var i = 0;
+                for(var key in classInheritDict[chooseBaseId]['subclasses'][chooseId]){
+                    if(i % 2 === 0){
+                        $table.append($('<tr>'));
+                    }
+                    var $tr = $table.children().first();
+                    $tr.append($('<td>')).append('<label>' + rDict[key] + ':</label>');
+                    $tr.append($('<td>')).append('<input type = "text" name = ' + key + ' value = ' +  JSON.stringify(classInheritDict[chooseBaseId]['subclasses'][chooseId][key]) + '>');
+                    i += 1;
+                }
+                $('#add').show();
+                return false;
+            });
+            $('#groupBegin').click(function(){
+                $('.listButton').hide();
+                $('#setPara').attr('name', 'groupBegin');
+                var $table = $('#setPara');
+                $table.empty();
+                $table.append('添加一个组');
+                $('#add').show();
+            });
+            $('#groupEnd').click(function(){
+                $('.listButton').hide();
+                $('#setPara').attr('name', 'groupEnd');
+                var $table = $('#setPara');
+                $table.empty();
+                $table.append('完成组的添加');
+                $('#add').show();
+            });
+            $('#add').click(function(){
+                if($('#setPara').attr('name') === 'groupBegin'){
+                    groupFlag = 1;
+                }else if($('#setPara').attr('name') === 'groupEnd'){
+                    groupFlag = 3;
+                }
+                var data = {'type': $(this).siblings("table").attr('name'), 'group': groupFlag};
+                var $table = $('#setPara');
+                $table.find('input').each(function(){
+                    data[$(this).attr('name')] = $(this).val();
+                });
+                $.ajax({
+                    type: "POST",
+                    async:true,
+                    contentType: "application/json; charset=utf-8",
+                    url: "/add",
+                    data: JSON.stringify(data),
+                    success: function (data) {
+                        data = JSON.parse(data);
+                        if(data[0] === 'error'){
+                            alert(data[1]);
+                        }else if(groupFlag === 0){
+                            $('#elemList').append("<li class = 'elemListElem'>" + rDict[data[0]] + "</li>");
+                            elemListElement.push(data);
+                        }else if(groupFlag === 1){
+                            $('#elemList').append("<li class = 'elemListElem'>组<ul class = 'groupListElem'></ul></li>");
+                            elemListElement.push(new Array());
+                        }else if(groupFlag === 2){
+                            $('#elemList').find('ul').last().append("<li class = 'elemListElem'>" + rDict[data[0]] + "</li>");
+                            elemListElement[elemListElement.length - 1].push(data);
+                        }else if(groupFlag === 3){
+                            groupFlag === 0;
+                        }
+                        updateThree();
+                        if(groupFlag === 1){
+                            groupFlag = 2;
+                        }else if(groupFlag === 3){
+                            groupFlag = 0;
+                        }
+                        console.log(elemListElement)
+                    },
+                    dataType: "html"
+                });
+            });
+            $('.elemListElem').live('click', function(){
+                $('#setPara').empty();
+                $('.addButton').hide();
+                $('.listButton').show();
+                var $table = $('#setPara')
+                var tempElem;
+                if($(this).parent().attr('class') === 'groupListElem'){
+                    var idx2 = $(this).index();
+                    var idx1 = $(this).parent().parent().index();
+                    tempElem = elemListElement[idx1][idx2];
+                    $('#change').attr('name', JSON.stringify([idx1, idx2]));
+                }else if($(this).attr('class') === 'groupListElem'){
+                    
+                }else{
+                    var idx = $(this).index();
+                    tempElem = elemListElement[idx];
+                    $('#change').attr('name', JSON.stringify([idx]));
+                }
+                $table.attr('name', tempElem[0]);
+                console.log(tempElem);
+                var i = 0;
+                for(var key in tempElem[1]){
+                    if(i % 2 === 0){
+                        $table.append($('<tr>'));
+                    }
+                    i += 1;
+                    var $tr = $table.children().first();
+                    $tr.append($('<td>')).append('<label>' + rDict[key] + ':</label>');
+                    $tr.append($('<td>')).append('<input type = "text" name = ' + key + ' value = ' +  JSON.stringify(tempElem[1][key]) + '>');
+                }
+                return false;
+            });
+            $('#change').click(function(){
+                var data = {'type': $(this).siblings("table").attr('name')};
+                var $table = $('#setPara');
+                var idx = JSON.parse($('#change').attr('name'));
+                data['idx'] = idx;
+                $table.find('input').each(function(){
+                    data[$(this).attr('name')] = $(this).val();
+                });
+                $.ajax({
+                    type: "POST",
+                    async:true,
+                    contentType: "application/json; charset=utf-8",
+                    url: "/change",
+                    data: JSON.stringify(data),
+                    success: function (data) {
+                        data = JSON.parse(data);
+                        if(groupFlag === 0){
+                            elemListElement[idx[0]] = data;
+                        }else{
+                            elemListElement[idx[0]][idx[1]] = data;
+                        }
+                        updateThree();
+                    },
+                    dataType: "html"
+                });
+            });
+            $('#del').live('click', function(){
+                var idx = JSON.parse($('#change').attr('name'));
+                if(idx.length === 1){
+                    elemListElement.splice(idx[0], 1);
+                    $('#elemList li:eq(' + idx[0] + ')').remove();
+                }else if(idx.length === 2){
+                    elemListElement[idx[0]].splice(idx[1], 1);
+                    $('#elemList li:eq(' + idx[0] + ') ul li:eq(' + idx[1] + ')').remove();
+                    if(elemListElement[idx[0]].length === 0){
+                        elemListElement.splice(idx[0], 1);
+                        $('#elemList li:eq(' + idx[0] + ')').remove();
+                    }
+                }
+                $.ajax({
+                    type: "POST",
+                    async:true,
+                    contentType: "application/json; charset=utf-8",
+                    url: "/del",
+                    data: JSON.stringify(idx),
+                    success: function(data){
+                        updateThree();
+                    },
+                    dataType: "html"
+                });
+            });
+            
+            h = $('#three').height();
+            w = $('#three').width();
+            camera = new THREE.PerspectiveCamera(45, w / h, 1, 10000);
+            camera.position.x = 0;
+            camera.position.y = 0;
+            camera.position.z = 600;
+            camera.up.x = 0;
+            camera.up.y = 1;
+            camera.up.z = 0;
+            scene = new THREE.Scene();
+            scene.add(camera);
+            var light = new THREE.AmbientLight(0xFFffff);
+            light.position.set(100, 100, 200);
+            scene.add(light);
+            light = new THREE.PointLight(0x00FF00);
+            light.position.set(0, 0, 300);
+            scene.add(light);
+            var axes = new THREE.AxisHelper(100);
+            scene.add(axes);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(w, h);
+            renderer.render(scene, camera);
+            renderer.setClearColor(0x000000, 1.0);
+            var container = document.getElementById('three');
+            var controls = new THREE.OrbitControls( camera, container);
+            controls.addEventListener('change', function(){renderer.render(scene, camera)});
+            document.getElementById('three').appendChild(renderer.domElement);
+            renderer.render(scene, camera);
+        });
+        </script>
+        <div id = 'nav'>
+        <ul>
+            # for bc_key, bc_value in classInherit.items()
+                <li id = '{{bc_key}}' class = 'chooseBaseItem'>{{rDict[bc_key]}}
+                    <ul>
+                    # for c_key, c_value in bc_value['subclasses'].items()
+                        <li id = '{{c_key}}' class = 'chooseChildItem'>{{rDict[c_key]}}</li>
+                    # endfor
+                    </ul>
+                </li>
+            # endfor
+            <li>组
+                <ul>
+                    <li id = 'groupBegin' class = 'group'>组开始</li>
+                    <li id = 'groupEnd' class = 'group'>组结束</li>
+                </ul>
+            </li>
+        </ul>
+        </div>
+        <div id = 'paraPan'>
+            <table id = 'setPara'>
+            </table>
+            <button id = 'add' class = 'addButton'>添加</button>
+            <button id = 'change' class = 'listButton'>修改</button>
+            <button id = 'del' class = 'listButton'>删除</button>
+        </div>
+        <ul id = 'elemList'>已添加项：</ul>
+        <div id = 'three'></div>
+    </body>
+</html>
