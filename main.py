@@ -17,7 +17,7 @@ def init():
     app.classListForJS = classInheritForJS
     app.baseClassType = baseClassType
     app.replaceList = replaceList
-    return render_template('index2.html', classInherit = app.classList, classInheritForJS = app.classListForJS, rDict = app.replaceList)
+    return render_template('index.html', classInherit = app.classList, classInheritForJS = app.classListForJS, rDict = app.replaceList)
 
 @app.route('/set_default', methods = ['POST'])
 def set_default():
