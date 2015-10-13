@@ -4,17 +4,20 @@ from numpy.fft import fft2, ifft2, fftshift
 from pprint import pprint
 from PIL import Image
 import pickle
+from math import *
 
 texture_path = 'texture/'
 config_path = 'config/'
 
-replaceList = {'SimpleScreen': '简单接收屏', 'SimpleFreeSpace': '简单自由空间传播', 'dist': '距离(mm)', 'WaveFront': '波面', 'amp': '振幅', 'lam': '波长(nm)', 'span': '尺寸(默认)(mm)', 'reso': '分辨率(默认)', 'WaveFrontGroup': '波组', 'PlaneWave': '平面波', 'angle': '传播方向([x, y, z])(mm)', 'SphereWave': '球面波', 'pos': '位置([x, y, z])(mm)', 'inOrOut': '发散(1)/收缩(-1)', 'WaveFliter': '滤波器', 'Len': '透镜', 'f': '焦距(mm)', 'ExpressFliter': '任意表达式滤波器', 'express': '表达式', 'Aperture': '光阑', 'SquareAperture': '矩形光阑', 'xspan': '孔水平长度(mm)', 'yspan': '孔竖直长度(mm)', 'center': '中心([u, v])', 'CircleAperture': '圆形光阑', 'r': '半径(mm)', 'reverse': '中心透光(0)/周围透光(1)', 'MultiSplitAperture': '多缝', 'a': '缝宽(mm)', 'd': '缝间距(mm)', 'num': '缝数', 'FresnelPlateAperture': '菲涅尔波带片', 'evenOrOdd': '偶数片(0)/奇数片(1)', 'roundOrSquare': '圆形(0)/方形(1)', 'ImageAperture': '图像光阑', 'img': '路径', 'Screen': '接收屏', 'thr': '阈值', 'FreeSpace': '自由空间传播', 'z': '传播距离(mm)'}
+replaceList = {'SimpleScreen': '简单接收屏', 'SimpleFreeSpace': '简单自由空间传播', 'dist': '距离(mm)', 'WaveFront': '波面', 'amp': '振幅', 'lam': '波长(nm)', 'span': '尺寸(默认)(mm)', 'reso': '分辨率(默认)', 'WaveFrontGroup': '波组', 'PlaneWave': '平面波', 'angle': '传播方向([x, y, z])(mm)', 'SphereWave': '球面波', 'pos': '位置([x, y, z])(mm)', 'inOrOut': '发散(1)/收缩(-1)', 'WaveFliter': '滤波器', 'Len': '透镜', 'f': '焦距(mm)', 'ExpressFliter': '任意表达式滤波器', 'express': '表达式', 'Aperture': '光阑', 'SquareAperture': '矩形光阑', 'xspan': '孔水平长度(mm)', 'yspan': '孔竖直长度(mm)', 'center': '中心([u, v])', 'CircleAperture': '圆形光阑', 'r': '半径(mm)', 'reverse': '中心透光(0)/周围透光(1)', 'MultiSplitAperture': '多缝', 'a': '缝宽(mm)', 'd': '缝间距(mm)', 'num': '缝数', 'FresnelPlateAperture': '菲涅尔波带片', 'evenOrOdd': '偶数片(0)/奇数片(1)', 'roundOrSquare': '圆形(1)/方形(0)', 'ImageAperture': '图像光阑', 'imgPath': '路径', 'Screen': '接收屏', 'thr': '阈值', 'FreeSpace': '自由空间传播', 'z': '传播距离(mm)', 'useLog': '线性显示(0)/对数显示(1)'}
 
 class Element:
     def __init__(self):
         default = self.getSpanAndReso()
         self.span = default['span']
         self.reso = default['reso']
+        #self.fftFactor = self.reso**2 / 2
+        self.fftFactor = 1
     def getSpanAndReso(self):
         with open(config_path + r'cfg.txt', 'rb') as f:
             temp = pickle.load(f)
@@ -26,29 +29,29 @@ class WaveFront(Element):
         self.amp = amp
         self.lam = lam * 1e-6
         self.k = 2 * np.pi / self.lam
-        self.x, self.y = np.mgrid[-self.span:self.span:self.reso * 1j, -self.span:self.span:self.reso * 1j]
+        self.x, self.y = np.mgrid[-self.span: self.span: self.reso*1j, -self.span: self.span: self.reso*1j]
         self.thr = 0
     def toDict(self):
         return {'amp': self.amp, 'lam': self.lam * 1e6} 
     def transport(self, freeSpace):
         z = freeSpace.z
-        zc = self.reso * (2 * self.span / self.reso)**2 / self.lam
+        zc = self.reso * (2*self.span/self.reso)**2 / self.lam
         #if np.all(self.waveFront == np.ones_like(self.waveFront) * self.waveFront[0, 0]):
         #    return self
         #'''
         if z > zc:
             freqDomient = fft2(self.waveFront)
-            h = np.exp(1j * self.k * z) / (1j * self.lam * z) * np.exp(1j * (self.x**2 + self.y**2) * self.k / (2 * z))
+            h = np.exp(1j*self.k*z) / (1j*self.lam*z) * np.exp(1j*(self.x**2+self.y**2)*self.k/(2*z))
             H = fft2(h)
             freqDomient *= H
-            self.waveFront = fftshift(ifft2(freqDomient))
+            self.waveFront = fftshift(ifft2(freqDomient)) / self.fftFactor
         else:
             freqDomient = fft2(self.waveFront)
             maxFreq = self.reso / (self.span * 4)
             fx, fy = np.mgrid[-maxFreq: maxFreq: self.reso * 1j, -maxFreq: maxFreq: self.reso * 1j]
             H = np.exp(1j * self.k * z * np.sqrt(1 + 0j - (self.lam * fx)**2 - (self.lam * fy)**2))
             freqDomient *= fftshift(H)
-            self.waveFront = ifft2(freqDomient)
+            self.waveFront = ifft2(freqDomient) / self.fftFactor
         return self
     def waveFrontChange(self, waveFliter):
         self.waveFront *= waveFliter.fliter(self.k)
@@ -158,7 +161,7 @@ class PlaneWave(WaveFront):
     def __init__(self, amp, lam, angle):
         super().__init__(amp, lam)
         self.angle = angle / np.sqrt(sum([i**2 for i in angle]))
-        self.waveFront = np.exp(1j * self.k * (self.angle[0] * self.x + self.angle[1] * self.y))
+        self.waveFront = np.exp(1j * self.k * (self.angle[0]*self.x + self.angle[1]*self.y))
     def toDict(self):
         t = super().toDict()
         t['angle'] = self.angle.tolist()
@@ -170,7 +173,7 @@ class SphereWave(WaveFront):
         self.inOrOut = inOrOut
         self.pos = pos
         self.u, self.v, self.w = self.pos
-        self.waveFront = np.exp(self.inOrOut * 1j * self.k * np.sqrt((self.x - self.u)**2 + (self.y - self.v)**2 + self.w**2))
+        self.waveFront = np.exp(self.inOrOut*1j*self.k*np.sqrt((self.x-self.u)**2 + (self.y-self.v)**2 + self.w**2))
     def toDict(self):
         t = super().toDict()
         t['inOrOut'] = self.inOrOut
@@ -180,7 +183,7 @@ class SphereWave(WaveFront):
 class WaveFliter(Element):
     def __init__(self):
         super().__init__()
-        self.x, self.y = np.mgrid[-self.span:self.span:self.reso * 1j, -self.span:self.span:self.reso * 1j]
+        self.x, self.y = np.mgrid[-self.span: self.span: self.reso*1j, -self.span: self.span: self.reso*1j]
     def toDict(self):
         return {}
     def fliter(self, k):
@@ -197,7 +200,7 @@ class Len(WaveFliter):
         super().__init__()
         self.f = f
         #self.opd = -(np.sqrt(self.x**2 + self.y**2 + self.f**2) - self.f)
-        self.opd = -(self.x**2 + self.y**2)/(2 * self.f)
+        self.opd = -(self.x**2+self.y**2) / (2*self.f)
     def toDict(self):
         t = super().toDict()
         t['f'] = self.f
@@ -207,7 +210,8 @@ class ExpressFliter(WaveFliter):
     def __init__(self, express):
         super().__init__()
         self.express = express
-        self.opd = self.express(self.x, self.y)
+        self.func = np.vectorize(eval('lambda x, y:' + express))
+        self.opd = self.func(self.x, self.y)
     def toDict(self):
         t = super().toDict()
         t['express'] = self.express
@@ -216,12 +220,15 @@ class ExpressFliter(WaveFliter):
 class Aperture(Element):
     def __init__(self):
         super().__init__()
-        self.x, self.y = np.mgrid[-self.span:self.span:self.reso * 1j, -self.span:self.span:self.reso * 1j]
+        self.x, self.y = np.mgrid[-self.span: self.span: self.reso*1j, -self.span: self.span: self.reso*1j]
+        self.gray = 150
     def toDict(self):
         return {}
     def show(self, i):
-        im =  Image.fromarray(self.stop * 255)
-        im =  im.convert('RGB')
+        bg = np.uint8(np.ones((self.reso, self.reso, 4)) * self.gray)
+        bg[:, :, 3] = np.uint8(255 - self.stop * 255)
+        im =  Image.fromarray(bg)
+        im =  im.convert('RGBA')
         im.save(texture_path + str(i) + r'.png', 'PNG')
     def __add__(self, other):
         if isinstance(other, Aperture):
@@ -240,7 +247,7 @@ class SquareAperture(Aperture):
         self.yspan = yspan
         self.center = center
         self.u, self.v = self.center
-        self.stop = np.logical_and(np.abs(self.x - self.u) < xspan, np.abs(self.y - self.v) < yspan)
+        self.stop = np.logical_and(np.abs(self.x-self.u) < xspan, np.abs(self.y-self.v) < yspan)
     def toDict(self):
         t = super().toDict()
         t['xspan'] = self.xspan
@@ -256,9 +263,9 @@ class CircleAperture(Aperture):
         self.r = r
         self.reverse = reverse
         if not reverse:
-            self.stop = ((self.x - self.u)**2 + (self.y - self.v)**2) < r**2
+            self.stop = ((self.x-self.u)**2 + (self.y-self.v)**2) < r**2
         else:
-            self.stop = ((self.x - self.u)**2 + (self.y - self.v)**2) > r**2
+            self.stop = ((self.x-self.u)**2 + (self.y-self.v)**2) > r**2
     def toDict(self):
         t = super().toDict()
         t['r'] = self.r
@@ -276,8 +283,8 @@ class MultiSplitAperture(Aperture):
         self.stop = np.zeros_like(self.x)
         y = self.y[0]
         for i in range(num - 1):
-            index = np.logical_and(np.abs(y) > ((0.5 + i) * d - a / 2), np.abs(y) < ((0.5 + i) * d + a / 2))
-            self.stop[self.reso // 2, index] = 1
+            index = np.logical_and(np.abs(y) > ((0.5+i)*d - a/2), np.abs(y) < ((0.5+i)*d + a/2))
+            self.stop[self.reso//2, index] = 1
     def toDict(self):
         t = super().toDict()
         t['a'] = self.a
@@ -285,13 +292,15 @@ class MultiSplitAperture(Aperture):
         t['num'] = self.num
         return t
     def show(self, i):
-        self.stop
+        #self.stop
         stop = np.zeros_like(self.x)
         for idx in range(self.num - 1):
-            index = np.logical_and(np.abs(self.y) > ((0.5 + idx) * self.d - self.a / 2), np.abs(self.y) < ((0.5 + idx) * self.d + self.a / 2))
+            index = np.logical_and(np.abs(self.y) > ((0.5+idx)*self.d - self.a/2), np.abs(self.y) < ((0.5+idx)*self.d + self.a/2))
             stop[index] = 1
-        im = Image.fromarray(stop * 255)
-        im = im.convert('RGB')
+        bg = np.uint8(np.ones((self.reso, self.reso, 4)) * self.gray)
+        bg[:, :, 3] = np.uint8(255 - stop * 255)
+        im = Image.fromarray(bg)
+        im = im.convert('RGBA')
         im.save(texture_path + str(i) + r'.png', 'PNG')
 
 class FresnelPlateAperture(Aperture):
@@ -313,8 +322,8 @@ class FresnelPlateAperture(Aperture):
         self.stop = np.zeros_like(self.x)
         self.stop[d < r] = 1
         for i in range(evenOrOdd, n, 2):
-            r1 = np.sqrt((dist + i * lam / 2)**2 - dist**2)
-            r2 = np.sqrt((dist + (i + 1) * lam / 2)**2 - dist**2)
+            r1 = np.sqrt((dist + i*lam/2)**2 - dist**2)
+            r2 = np.sqrt((dist + (i+1)*lam/2)**2 - dist**2)
             index = np.logical_and(d > r1 , d < r2)
             self.stop[index] = 0
     def toDict(self):
@@ -327,25 +336,29 @@ class FresnelPlateAperture(Aperture):
         return t
 
 class ImageAperture(Aperture):
-    def __init__(self, img):
-        super().__init__(self)
-        self.img = img
-        self.stop = np.asarray(Image.open(img))[:, :, 0]
+    def __init__(self, imgPath):
+        super().__init__()
+        self.imgPath = imgPath
+        img = np.asarray(Image.open(self.imgPath), dtype = np.uint8).T
+        self.stop = img.copy() / 255
     def toDict(self):
         t = super().toDict()
-        t['img'] = self.img
+        t['imgPath'] = self.imgPath
         return t
 
 class Screen(Element):
-    def __init__(self, thr = 0):
+    def __init__(self, thr = 0, useLog = 0):
         super().__init__()
         self.thr = thr
+        self.useLog = useLog
         self.I = np.zeros((self.reso, self.reso))
     def toDict(self):
-        return {'thr': self.thr}
+        return {'thr': self.thr, 'useLog': self.useLog}
     def show(self, i):
-        if self.thr:
+        if self.thr != 0:
             self.I[self.I > self.thr] = self.thr
+        if self.useLog != 0:
+            self.I = np.log(self.I + 1)
         im =  Image.fromarray(self.I / np.max(self.I) * 255)
         im =  im.convert('RGB')
         im.save(texture_path + str(i) + r'.png', 'PNG')
@@ -353,8 +366,8 @@ class Screen(Element):
         pass
         
 class SimpleScreen(Screen):
-    def __init__(self, thr = 0):
-        super().__init__(thr)
+    def __init__(self, thr = 0, useLog = 0):
+        super().__init__(thr, useLog)
 
 class FreeSpace:
     def __init__(self, z):

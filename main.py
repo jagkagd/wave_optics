@@ -4,6 +4,8 @@ from jinja2 import Environment, PackageLoader
 import copy
 import time
 import pickle
+import webbrowser  
+import os
 
 app = Flask(__name__)
 app.jinja_env.line_statement_prefix = '#'
@@ -17,7 +19,7 @@ def init():
     app.classListForJS = classInheritForJS
     app.baseClassType = baseClassType
     app.replaceList = replaceList
-    return render_template('index.html', classInherit = app.classList, classInheritForJS = app.classListForJS, rDict = app.replaceList)
+    return render_template('index2.html', classInherit = app.classList, classInheritForJS = app.classListForJS, rDict = app.replaceList)
 
 @app.route('/set_default', methods = ['POST'])
 def set_default():
@@ -36,10 +38,17 @@ def add():
     del data['group']
     if group == 0:
         for key, value in data.items():
-            data[key] = eval(value)
+            if key in ['imgPath', 'express']:
+                data[key] = value
+            else:
+                data[key] = eval(value)
+        print(data)
         app.elementList.append(eval(classType + '(**data)'))
         try:
+            '''
+            deleteImgs()
             calc(app.elementList)
+            '''
             t = app.elementList[-1]
             return json.dumps([type(t).__name__, t.toDict()])
         except TypeError as e:
@@ -54,7 +63,10 @@ def add():
         print(data)
         app.elementList[-1].append(eval(classType + '(**data)'))
         try:
+            '''
+            deleteImgs()
             calc(app.elementList)
+            '''
             t = app.elementList[-1][-1]
             return json.dumps([type(t).__name__, t.toDict()])
         except TypeError as e:
@@ -72,15 +84,24 @@ def change():
     del data['type']
     del data['idx']
     for key, value in data.items():
-        data[key] = eval(value)
+        if key in ['imgPath', 'express']:
+            data[key] = value
+        else:
+            data[key] = eval(value)
     print(data)
     if len(idx) == 1:
         app.elementList[idx[0]] = eval(classType + '(**data)')
+        '''
+        deleteImgs()
         calc(app.elementList)
+        '''
         t = app.elementList[idx[0]]
     elif len(idx) == 2:
         app.elementList[idx[0]][idx[1]] = eval(classType + '(**data)')
+        '''
+        deleteImgs()
         calc(app.elementList)
+        '''
         t = app.elementList[idx[0]][idx[1]]
     return json.dumps([type(t).__name__, t.toDict()])
 
@@ -94,7 +115,10 @@ def delete():
         if len(app.elementList[data[0]]) == 0:
             del app.elementList[data[0]]
     if app.elementList:
+        '''
+        deleteImgs()
         calc(app.elementList)
+        '''
     return 'a'
 
 @app.route('/texture/<path:filename>', methods = ['GET', 'POST'])
@@ -108,5 +132,11 @@ def calc(elemList):
     np.product(clist)
     [i.show(k) for (k, i) in enumerate(clist)]
 
+def deleteImgs():
+    files = os.listdir('texture\\')
+    for fileName in files:
+        os.remove('texture\\' + fileName)
+
 if __name__ == '__main__':
+    #webbrowser.open_new_tab("http://127.0.0.1:8000")  
     app.run(port = 8000, debug = True)

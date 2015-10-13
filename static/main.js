@@ -3,8 +3,13 @@ $(document).ready(function(){
     $('.listButton').hide();
     $('#groupList').hide();
     $("#nav ul li ul").hide();
-    var span = parseInt(prompt('元件尺寸(mm)：', '5'));
-    var reso = parseInt(prompt('分辨率:', '2048'));
+    $('#elemList').sortable();
+    //console.log(classInheritDict);
+    //console.log(Object.keys(classInheritDict['FreeSpace']['subclasses']));
+
+    var span = parseInt(prompt('size(mm):', '5'));
+    var reso = parseInt(prompt('resolution:', '2048'));
+
     data = {'span': span, 'reso': reso};
     $.ajax({
         type: "POST",
@@ -15,10 +20,12 @@ $(document).ready(function(){
         success: console.log('success'),
         dataType: "html"
     });
+    
     $("#nav ul li").click(function(e) {
       $(this).children("ul").slideToggle();
       e.stopPropagation();
     });
+
     $('.chooseChildItem').click(function(){
         $('.listButton').hide();
         var chooseId = $(this).attr('id');
@@ -33,12 +40,13 @@ $(document).ready(function(){
             }
             var $tr = $table.children().first();
             $tr.append($('<td>')).append('<label>' + rDict[key] + ':</label>');
-            $tr.append($('<td>')).append('<input type = "text" name = ' + key + ' value = ' +  JSON.stringify(classInheritDict[chooseBaseId]['subclasses'][chooseId][key]) + '>');
+            $tr.append($('<td>')).append('<input type="text" name=' + key + ' value=' +  JSON.stringify(classInheritDict[chooseBaseId]['subclasses'][chooseId][key]) + '>');
             i += 1;
         }
         $('#add').show();
         return false;
     });
+
     $('#groupBegin').click(function(){
         $('.listButton').hide();
         $('#setPara').attr('name', 'groupBegin');
@@ -47,6 +55,7 @@ $(document).ready(function(){
         $table.append('添加一个组');
         $('#add').show();
     });
+
     $('#groupEnd').click(function(){
         $('.listButton').hide();
         $('#setPara').attr('name', 'groupEnd');
@@ -55,6 +64,7 @@ $(document).ready(function(){
         $table.append('完成组的添加');
         $('#add').show();
     });
+
     $('#add').click(function(){
         if($('#setPara').attr('name') === 'groupBegin'){
             groupFlag = 1;
@@ -74,16 +84,28 @@ $(document).ready(function(){
             data: JSON.stringify(data),
             success: function (data) {
                 data = JSON.parse(data);
+                //console.log(data);
                 if(data[0] === 'error'){
                     alert(data[1]);
                 }else if(groupFlag === 0){
-                    $('#elemList').append("<li class = 'elemListElem'>" + rDict[data[0]] + "</li>");
+                    //console.log(data[0]);
+                    //console.log(Object.keys(classInheritDict['FreeSpace']['subclasses']));
+                    //console.log($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])));
+                    if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
+                        $('#elemList').append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
+                    }else{
+                        $('#elemList').append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
+                    }
                     elemListElement.push(data);
                 }else if(groupFlag === 1){
-                    $('#elemList').append("<li class = 'elemListElem'>组<ul class = 'groupListElem'></ul></li>");
+                    $('#elemList').append("<li class='elemListElem'>组<ul class='groupListElem'></ul></li>");
                     elemListElement.push(new Array());
                 }else if(groupFlag === 2){
-                    $('#elemList').find('ul').last().append("<li class = 'elemListElem'>" + rDict[data[0]] + "</li>");
+                    if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
+                        $('#elemList').find('ul').last().append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
+                    }else{
+                        $('#elemList').find('ul').last().append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
+                    }
                     elemListElement[elemListElement.length - 1].push(data);
                 }else if(groupFlag === 3){
                     groupFlag === 0;
@@ -99,6 +121,7 @@ $(document).ready(function(){
             dataType: "html"
         });
     });
+
     $('.elemListElem').live('click', function(){
         $('#setPara').empty();
         $('.addButton').hide();
@@ -125,10 +148,11 @@ $(document).ready(function(){
             i += 1;
             var $tr = $table.children().first();
             $tr.append($('<td>')).append('<label>' + rDict[key] + ':</label>');
-            $tr.append($('<td>')).append('<input type = "text" name = ' + key + ' value = ' +  JSON.stringify(tempElem[1][key]) + '>');
+            $tr.append($('<td>')).append('<input type="text" name=' + key + ' value = ' +  JSON.stringify(tempElem[1][key]) + '>');
         }
         return false;
     });
+
     $('#change').click(function(){
         var data = {'type': $(this).siblings("table").attr('name')};
         var $table = $('#setPara');
@@ -155,6 +179,7 @@ $(document).ready(function(){
             dataType: "html"
         });
     });
+
     $('#del').live('click', function(){
         var idx = JSON.parse($('#change').attr('name'));
         if(idx.length === 1){
@@ -180,4 +205,7 @@ $(document).ready(function(){
             dataType: "html"
         });
     });
+    
+    //$('#calc').click(function(){
+
 });
