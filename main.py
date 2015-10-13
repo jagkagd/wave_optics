@@ -29,6 +29,7 @@ def set_default():
         pickle.dump(data, f)
     return 'success'
 
+"""
 @app.route('/add', methods = ['POST'])
 def add():
     data = json.loads(request.data)
@@ -120,17 +121,43 @@ def delete():
         calc(app.elementList)
         '''
     return 'a'
+"""
 
 @app.route('/texture/<path:filename>', methods = ['GET', 'POST'])
 def send_pic(filename):
     return send_from_directory('./texture', filename)
 
-def calc(elemList):
+@app.route('/calc', methods = ['POST'])
+def calc():
+    elemList = []
+    data = json.loads(request.data)
+    for elem in data:
+        if type(elem[0]).__name__ == 'str':
+            elemList.append({})
+            for key, value in elem.items():
+                if key in ['imgPath', 'express']:
+                    elemList[-1][key] = value
+                else:
+                    elemList[-1][key] = eval(value)
+        else:
+            elemList.append([])
+            for groupElem in elem:
+                elemList[-1].append({})
+                for key, value in elem.items():
+                    if key in ['imgPath', 'express']:
+                        elemList[-1][-1][key] = value
+                    else:
+                        elemList[-1][-1][key] = eval(value)
     print(elemList)
     clist = copy.deepcopy(elemList)
-    clist = [np.sum(i) for i in clist]
-    np.product(clist)
-    [i.show(k) for (k, i) in enumerate(clist)]
+    try:
+        clist = [np.sum(i) for i in clist]
+        np.product(clist)
+        deleteImgs()
+        [i.show(k) for (k, i) in enumerate(clist)]
+        return json.dumps('success')
+    except TypeError as e:
+        return json.dumps('error: ' + str(e))
 
 def deleteImgs():
     files = os.listdir('texture\\')
