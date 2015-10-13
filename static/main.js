@@ -1,11 +1,10 @@
 $(document).ready(function(){
+    var cnt = 0;
     $('.addButton').hide();
     $('.listButton').hide();
     $('#groupList').hide();
     $("#nav ul li ul").hide();
     $('#elemList').sortable();
-    //console.log(classInheritDict);
-    //console.log(Object.keys(classInheritDict['FreeSpace']['subclasses']));
 
     var span = parseInt(prompt('size(mm):', '5'));
     var reso = parseInt(prompt('resolution:', '2048'));
@@ -66,6 +65,7 @@ $(document).ready(function(){
     });
 
     $('#add').click(function(){
+        cnt++;
         if($('#setPara').attr('name') === 'groupBegin'){
             groupFlag = 1;
         }else if($('#setPara').attr('name') === 'groupEnd'){
@@ -76,50 +76,31 @@ $(document).ready(function(){
         $table.find('input').each(function(){
             data[$(this).attr('name')] = $(this).val();
         });
-        $.ajax({
-            type: "POST",
-            async:true,
-            contentType: "application/json; charset=utf-8",
-            url: "/add",
-            data: JSON.stringify(data),
-            success: function (data) {
-                data = JSON.parse(data);
-                //console.log(data);
-                if(data[0] === 'error'){
-                    alert(data[1]);
-                }else if(groupFlag === 0){
-                    //console.log(data[0]);
-                    //console.log(Object.keys(classInheritDict['FreeSpace']['subclasses']));
-                    //console.log($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])));
-                    if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
-                        $('#elemList').append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
-                    }else{
-                        $('#elemList').append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
-                    }
-                    elemListElement.push(data);
-                }else if(groupFlag === 1){
-                    $('#elemList').append("<li class='elemListElem'>ื้<ul class='groupListElem'></ul></li>");
-                    elemListElement.push(new Array());
-                }else if(groupFlag === 2){
-                    if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
-                        $('#elemList').find('ul').last().append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
-                    }else{
-                        $('#elemList').find('ul').last().append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
-                    }
-                    elemListElement[elemListElement.length - 1].push(data);
-                }else if(groupFlag === 3){
-                    groupFlag === 0;
-                }
-                updateThree();
-                if(groupFlag === 1){
-                    groupFlag = 2;
-                }else if(groupFlag === 3){
-                    groupFlag = 0;
-                }
-                console.log(elemListElement)
-            },
-            dataType: "html"
-        });
+        if(groupFlag === 0){
+            if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
+                $('#elemList').append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
+            }else{
+                $('#elemList').append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
+            }
+            elemListElement.push(data);
+        }else if(groupFlag === 1){
+            $('#elemList').append("<li class='elemListElem'>ื้<ul class='groupListElem'></ul></li>");
+            elemListElement.push(new Array());
+        }else if(groupFlag === 2){
+            if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
+                $('#elemList').find('ul').last().append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
+            }else{
+                $('#elemList').find('ul').last().append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
+            }
+            elemListElement[elemListElement.length - 1].push(data);
+        }else if(groupFlag === 3){
+            groupFlag === 0;
+        }
+        if(groupFlag === 1){
+            groupFlag = 2;
+        }else if(groupFlag === 3){
+            groupFlag = 0;
+        }
     });
 
     $('.elemListElem').live('click', function(){
@@ -148,7 +129,7 @@ $(document).ready(function(){
             i += 1;
             var $tr = $table.children().first();
             $tr.append($('<td>')).append('<label>' + rDict[key] + ':</label>');
-            $tr.append($('<td>')).append('<input type="text" name=' + key + ' value = ' +  JSON.stringify(tempElem[1][key]) + '>');
+            $tr.append($('<td>')).append('<input type="text" name=' + key + ' value=' +  JSON.stringify(tempElem[1][key]) + '>');
         }
         return false;
     });
@@ -161,23 +142,11 @@ $(document).ready(function(){
         $table.find('input').each(function(){
             data[$(this).attr('name')] = $(this).val();
         });
-        $.ajax({
-            type: "POST",
-            async:true,
-            contentType: "application/json; charset=utf-8",
-            url: "/change",
-            data: JSON.stringify(data),
-            success: function (data) {
-                data = JSON.parse(data);
-                if(groupFlag === 0){
-                    elemListElement[idx[0]] = data;
-                }else{
-                    elemListElement[idx[0]][idx[1]] = data;
-                }
-                updateThree();
-            },
-            dataType: "html"
-        });
+        if(groupFlag === 0){
+            elemListElement[idx[0]] = data;
+        }else{
+            elemListElement[idx[0]][idx[1]] = data;
+        }
     });
 
     $('#del').live('click', function(){
@@ -193,19 +162,32 @@ $(document).ready(function(){
                 $('#elemList li:eq(' + idx[0] + ')').remove();
             }
         }
+    });
+    
+    $('#calc').click(function(){
         $.ajax({
             type: "POST",
             async:true,
             contentType: "application/json; charset=utf-8",
-            url: "/del",
-            data: JSON.stringify(idx),
+            url: "/calc",
+            data: JSON.stringify(elemListElement),
             success: function(data){
-                updateThree();
+                console.log(data);
             },
             dataType: "html"
         });
     });
-    
-    //$('#calc').click(function(){
 
+    $('#elemList').sortable({
+        start: function(event, ui){
+            var startIdx = ui.item.index();
+            ui.item.data('startIdx', startIdx);
+        },
+        update: function(event, ui){
+            var startIdx = ui.item.data('startIdx');
+            var endIdx = ui.item.index();
+            var temp = elemListElement.splice(startIdx, 1);
+            elemListElement.splice(endIdx, 0, temp);
+        }
+    });
 });
