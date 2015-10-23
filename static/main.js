@@ -1,3 +1,33 @@
+function showElem(){
+    $.ajax({
+        type: "POST",
+        async:true,
+        contentType: "application/json; charset=utf-8",
+        url: "/show",
+        data: JSON.stringify(elemListElement),
+        success: function(){
+            updateThree();
+        },
+        dataType: "html"
+    });
+}
+
+function updateElemList(elementList, domElemList){
+    domElemList.children('li').remove();
+    for(var i=0; i<elementList.length; i++){
+        data = elementList[i];
+        if($.isEmptyObject(data) || $.type(data[0]) === "array"){
+            domElemList.append("<li class='elemListElem'>ç»„<ul class='groupListElem'></ul></li>");
+            subDomElemList = domElemList.find('ul').last();
+            updateElemList(data, subDomElemList);
+        }else if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
+            domElemList.append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
+        }else{
+            domElemList.append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
+        }
+    }
+}
+
 $(document).ready(function(){
     var cnt = 0;
     $('.addButton').hide();
@@ -6,8 +36,8 @@ $(document).ready(function(){
     $("#nav ul li ul").hide();
     $('#elemList').sortable();
 
-    var span = parseInt(prompt('size(mm):', '5'));
-    var reso = parseInt(prompt('resolution:', '2048'));
+    var span = parseInt(prompt('å°ºå¯¸(ä¸­å¿ƒåˆ°è¾¹ç¼˜)(mm):', '5'));
+    var reso = parseInt(prompt('åˆ†è¾¨çŽ‡:', '2048'));
 
     data = {'span': span, 'reso': reso};
     $.ajax({
@@ -51,7 +81,7 @@ $(document).ready(function(){
         $('#setPara').attr('name', 'groupBegin');
         var $table = $('#setPara');
         $table.empty();
-        $table.append('Ìí¼ÓÒ»¸ö×é');
+        $table.append('æ·»åŠ ä¸€ä¸ªç»„');
         $('#add').show();
     });
 
@@ -60,7 +90,7 @@ $(document).ready(function(){
         $('#setPara').attr('name', 'groupEnd');
         var $table = $('#setPara');
         $table.empty();
-        $table.append('Íê³É×éµÄÌí¼Ó');
+        $table.append('å®Œæˆç»„çš„æ·»åŠ ');
         $('#add').show();
     });
 
@@ -71,27 +101,16 @@ $(document).ready(function(){
         }else if($('#setPara').attr('name') === 'groupEnd'){
             groupFlag = 3;
         }
-        var data = {'type': $(this).siblings("table").attr('name'), 'group': groupFlag};
+        var data = [$(this).siblings("table").attr('name'), {}];
         var $table = $('#setPara');
         $table.find('input').each(function(){
-            data[$(this).attr('name')] = $(this).val();
+            data[1][$(this).attr('name')] = $(this).val();
         });
         if(groupFlag === 0){
-            if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
-                $('#elemList').append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
-            }else{
-                $('#elemList').append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
-            }
             elemListElement.push(data);
         }else if(groupFlag === 1){
-            $('#elemList').append("<li class='elemListElem'>×é<ul class='groupListElem'></ul></li>");
             elemListElement.push(new Array());
         }else if(groupFlag === 2){
-            if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
-                $('#elemList').find('ul').last().append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
-            }else{
-                $('#elemList').find('ul').last().append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
-            }
             elemListElement[elemListElement.length - 1].push(data);
         }else if(groupFlag === 3){
             groupFlag === 0;
@@ -101,6 +120,8 @@ $(document).ready(function(){
         }else if(groupFlag === 3){
             groupFlag = 0;
         }
+        updateElemList(elemListElement, $('#elemList'));
+        showElem();
     });
 
     $('.elemListElem').live('click', function(){
@@ -110,17 +131,16 @@ $(document).ready(function(){
         var $table = $('#setPara')
         var tempElem;
         if($(this).parent().attr('class') === 'groupListElem'){
-            var idx2 = $(this).index();
-            var idx1 = $(this).parent().parent().index();
+            var idx1 = $(this).index();
+            var idx0 = $(this).parent().parent().index();
             tempElem = elemListElement[idx1][idx2];
-            $('#change').attr('name', JSON.stringify([idx1, idx2]));
+            $('#change').attr('name', JSON.stringify([idx0, idx1]));
         }else{
             var idx = $(this).index();
             tempElem = elemListElement[idx];
             $('#change').attr('name', JSON.stringify([idx]));
         }
         $table.attr('name', tempElem[0]);
-        console.log(tempElem);
         var i = 0;
         for(var key in tempElem[1]){
             if(i % 2 === 0){
@@ -135,33 +155,33 @@ $(document).ready(function(){
     });
 
     $('#change').click(function(){
-        var data = {'type': $(this).siblings("table").attr('name')};
         var $table = $('#setPara');
         var idx = JSON.parse($('#change').attr('name'));
-        data['idx'] = idx;
+        var data = [$(this).siblings("table").attr('name'), {}];
         $table.find('input').each(function(){
-            data[$(this).attr('name')] = $(this).val();
+            data[1][$(this).attr('name')] = $(this).val();
         });
-        if(groupFlag === 0){
+        if(idx.length === 1){
             elemListElement[idx[0]] = data;
-        }else{
+        }else if(idx.length === 2){
             elemListElement[idx[0]][idx[1]] = data;
         }
+        updateElemList(elemListElement, $('#elemList'));
+        showElem();
     });
 
     $('#del').live('click', function(){
         var idx = JSON.parse($('#change').attr('name'));
         if(idx.length === 1){
             elemListElement.splice(idx[0], 1);
-            $('#elemList li:eq(' + idx[0] + ')').remove();
         }else if(idx.length === 2){
             elemListElement[idx[0]].splice(idx[1], 1);
-            $('#elemList li:eq(' + idx[0] + ') ul li:eq(' + idx[1] + ')').remove();
             if(elemListElement[idx[0]].length === 0){
                 elemListElement.splice(idx[0], 1);
-                $('#elemList li:eq(' + idx[0] + ')').remove();
             }
         }
+        updateElemList(elemListElement, $('#elemList'));
+        showElem();
     });
     
     $('#calc').click(function(){
@@ -173,6 +193,7 @@ $(document).ready(function(){
             data: JSON.stringify(elemListElement),
             success: function(data){
                 console.log(data);
+                updateThree();
             },
             dataType: "html"
         });
@@ -186,8 +207,9 @@ $(document).ready(function(){
         update: function(event, ui){
             var startIdx = ui.item.data('startIdx');
             var endIdx = ui.item.index();
-            var temp = elemListElement.splice(startIdx, 1);
+            var temp = elemListElement.splice(startIdx, 1)[0];
             elemListElement.splice(endIdx, 0, temp);
+            showElem();
         }
     });
 });

@@ -14,147 +14,65 @@ config_path = 'config/'
 
 @app.route('/')
 def init():
-    app.elementList = []
     app.classList = classInherit
     app.classListForJS = classInheritForJS
     app.baseClassType = baseClassType
     app.replaceList = replaceList
-    return render_template('index2.html', classInherit = app.classList, classInheritForJS = app.classListForJS, rDict = app.replaceList)
+    return render_template('index.html', classInherit = app.classList, classInheritForJS = app.classListForJS, rDict = app.replaceList)
 
 @app.route('/set_default', methods = ['POST'])
 def set_default():
     data = json.loads(request.data)
-    print(data)
     with open(config_path + r'cfg.txt', 'wb') as f:
         pickle.dump(data, f)
     return 'success'
-
-"""
-@app.route('/add', methods = ['POST'])
-def add():
-    data = json.loads(request.data)
-    classType = data['type']
-    group = data['group']
-    del data['type']
-    del data['group']
-    if group == 0:
-        for key, value in data.items():
-            if key in ['imgPath', 'express']:
-                data[key] = value
-            else:
-                data[key] = eval(value)
-        print(data)
-        app.elementList.append(eval(classType + '(**data)'))
-        try:
-            '''
-            deleteImgs()
-            calc(app.elementList)
-            '''
-            t = app.elementList[-1]
-            return json.dumps([type(t).__name__, t.toDict()])
-        except TypeError as e:
-            del app.elementList[-1]
-            return json.dumps(['error', str(e)])
-    elif group == 1:
-        app.elementList.append([])
-        return json.dumps('a')
-    elif group == 2:
-        for key, value in data.items():
-            data[key] = eval(value)
-        print(data)
-        app.elementList[-1].append(eval(classType + '(**data)'))
-        try:
-            '''
-            deleteImgs()
-            calc(app.elementList)
-            '''
-            t = app.elementList[-1][-1]
-            return json.dumps([type(t).__name__, t.toDict()])
-        except TypeError as e:
-            del app.elementList[-1][-1]
-            return json.dumps(['error', str(e)])
-    elif group == 3:
-        return json.dumps('a')
-    
-    
-@app.route('/change', methods = ['POST'])
-def change():
-    data = json.loads(request.data)
-    classType = data['type']
-    idx = data['idx']
-    del data['type']
-    del data['idx']
-    for key, value in data.items():
-        if key in ['imgPath', 'express']:
-            data[key] = value
-        else:
-            data[key] = eval(value)
-    print(data)
-    if len(idx) == 1:
-        app.elementList[idx[0]] = eval(classType + '(**data)')
-        '''
-        deleteImgs()
-        calc(app.elementList)
-        '''
-        t = app.elementList[idx[0]]
-    elif len(idx) == 2:
-        app.elementList[idx[0]][idx[1]] = eval(classType + '(**data)')
-        '''
-        deleteImgs()
-        calc(app.elementList)
-        '''
-        t = app.elementList[idx[0]][idx[1]]
-    return json.dumps([type(t).__name__, t.toDict()])
-
-@app.route('/del', methods = ['POST'])
-def delete():
-    data = json.loads(request.data)
-    if len(data) == 1:
-        del app.elementList[data[0]]
-    elif len(data) == 2:
-        del app.elementList[data[0]][data[1]]
-        if len(app.elementList[data[0]]) == 0:
-            del app.elementList[data[0]]
-    if app.elementList:
-        '''
-        deleteImgs()
-        calc(app.elementList)
-        '''
-    return 'a'
-"""
 
 @app.route('/texture/<path:filename>', methods = ['GET', 'POST'])
 def send_pic(filename):
     return send_from_directory('./texture', filename)
 
+def parseItem(key, value):
+    if key in ['imgPath', 'express']:
+        return value
+    else:
+        return eval(value)
+
+def parseData(data):
+    elementList = []
+    for elem in data:
+        if not elem:
+            elementList.append(Identity())
+        elif type(elem[0]).__name__ == 'str':
+            classType = elem[0]
+            for key, value in elem[1].items():
+                elem[1][key] = parseItem(key, value)
+            elementList.append(eval(classType + '(**elem[1])'))
+        elif type(elem[0]).__name__ == 'list':
+            tempElemList = parseData(elem)
+            elementList.append(tempElemList)
+    return elementList
+
+@app.route('/show', methods = ['POST'])
+def show():
+    data = json.loads(request.data)
+    elemList = parseData(data)
+    try:
+        elemList = [np.sum(i) for i in elemList]
+        deleteImgs()
+        [i.show(k) for (k, i) in enumerate(elemList)]
+        return json.dumps('success')
+    except TypeError as e:
+        return json.dumps('error: ' + str(e))
+
 @app.route('/calc', methods = ['POST'])
 def calc():
-    elemList = []
     data = json.loads(request.data)
-    for elem in data:
-        if type(elem[0]).__name__ == 'str':
-            elemList.append({})
-            for key, value in elem.items():
-                if key in ['imgPath', 'express']:
-                    elemList[-1][key] = value
-                else:
-                    elemList[-1][key] = eval(value)
-        else:
-            elemList.append([])
-            for groupElem in elem:
-                elemList[-1].append({})
-                for key, value in elem.items():
-                    if key in ['imgPath', 'express']:
-                        elemList[-1][-1][key] = value
-                    else:
-                        elemList[-1][-1][key] = eval(value)
-    print(elemList)
-    clist = copy.deepcopy(elemList)
+    elemList = parseData(data)
     try:
-        clist = [np.sum(i) for i in clist]
-        np.product(clist)
+        elemList = [np.sum(i) for i in elemList]
+        np.product(elemList)
         deleteImgs()
-        [i.show(k) for (k, i) in enumerate(clist)]
+        [i.show(k) for (k, i) in enumerate(elemList)]
         return json.dumps('success')
     except TypeError as e:
         return json.dumps('error: ' + str(e))
@@ -165,5 +83,5 @@ def deleteImgs():
         os.remove('texture\\' + fileName)
 
 if __name__ == '__main__':
-    #webbrowser.open_new_tab("http://127.0.0.1:8000")  
-    app.run(port = 8000, debug = True)
+    webbrowser.open_new_tab("http://127.0.0.1:8000")  
+    app.run(port = 8000, debug = False)

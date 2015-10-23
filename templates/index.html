@@ -11,10 +11,11 @@
             var groupFlag = 0;
         </script>
         <script type="text/javascript" src="{{url_for('static', filename='jquery.min.js') }}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='jquery-ui.min.js') }}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='three.min.js') }}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='control.js') }}"></script>
         <script type="text/javascript" src="{{url_for('static', filename='main.js') }}"></script>
-        <script type="text/javascript" src="{{url_for('static', filename='three.js') }}"></script>
+        <script type="text/javascript" src="{{url_for('static', filename='showElement.js') }}"></script>
         <div id='nav'>
         <ul>
             # for bc_key, bc_value in classInherit.items()
@@ -41,7 +42,10 @@
             <button id='change' class='listButton'>修改</button>
             <button id='del' class='listButton'>删除</button>
         </div>
-        <ul id='elemList'>已添加项：</ul>
+        <div id='elemListWithButton'>
+            <ul id='elemList'>已添加项：</ul>
+            <button id='calc'>计算</button>
+        </div>
         <div id='three'></div>
     </body>
 </html>
