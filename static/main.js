@@ -1,31 +1,123 @@
+var elemListForShow = new Array();
+
+function getInputValue($item){
+    if($item.is('input')){
+        var inputType = $item.attr('type');
+        if(inputType === 'text'){
+            return $item.val();
+        }else if(inputType === 'checkbox'){
+            return ($item.attr('checked') === 'checked')? 'true': 'false';
+        }
+    }else if($item.is('select')){
+        return $item.val();
+    }
+}
+
 function showElem(){
+    $('#status').text('Processing...');
+    console.log(elemListForShow);
     $.ajax({
         type: "POST",
         async:true,
         contentType: "application/json; charset=utf-8",
         url: "/show",
-        data: JSON.stringify(elemListElement),
-        success: function(){
-            updateThree();
+        data: JSON.stringify(elemListForShow),
+        success: function(data){
+            showFeedback(data);
+            updateThree(elemListForShow);
         },
         dataType: "html"
     });
 }
 
-function updateElemList(elementList, domElemList){
+function updateDomElemList(elementList, domElemList){
     domElemList.children('li').remove();
     for(var i=0; i<elementList.length; i++){
         data = elementList[i];
         if($.isEmptyObject(data) || $.type(data[0]) === "array"){
-            domElemList.append("<li class='elemListElem'>组<ul class='groupListElem'></ul></li>");
+            domElemList.append("<li class='elemListElem'>(<ul class='groupListElem'></ul>)</li>");
             subDomElemList = domElemList.find('ul').last();
-            updateElemList(data, subDomElemList);
-        }else if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subclasses'])) > -1){
-            domElemList.append("<li class='elemListElem'>" + data[1]['z'] + "mm" + "</li>");
+            updateDomElemList(data, subDomElemList);
+        }else if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subClasses'])) > -1){
+            domElemList.append("<li class='elemListElem'>" + data[1]['z']['default'] + "mm" + "</li>");
         }else{
             domElemList.append("<li class='elemListElem'>" + rDict[data[0]] + "</li>");
         }
     }
+}
+
+function showElementParaPan(elem, $table){
+    $table.empty();
+    var i = 0;
+    for(var key in elem){
+        if(i % 2 === 0){
+            $table.append($('<tr>'));
+        }
+        var $tr = $table.children().first();
+        showElementPara(elem, key, $tr);
+        i += 1;
+    }
+}
+
+function showElementPara(elem, key, $tr){
+    $tr.append($('<td>')).append('<label>' + rDict[key] + ':</label>');
+    var keyType = elem[key]['annotation'];
+    var inputType, enumList;
+    if($.inArray(keyType, ['float', 'int', 'str']) > -1){
+        inputType = "text";
+    }else if(keyType === 'bool'){
+        inputType = "checkbox";
+    }else if($.type(keyType) === 'array'){
+        if($.inArray(keyType[0], ['float', 'int']) > -1){
+            inputType = "text";
+        }
+    }else if(keyType[0] === '|'){
+        inputType = "select";
+        enumList = keyType.split('|').slice(1);
+    }
+    if($.inArray(inputType, ["text", "str"]) > -1){
+        $tr.append($('<td>')).append('<input type=' + inputType + ' name=' + key + ' value=' +  JSON.stringify(elem[key]['default']) + '>');
+    }else if(inputType === 'checkbox'){
+        if(elem[key]['default'] === 'true'){
+            $tr.append($('<td>')).append('<input type=' + inputType + ' name=' + key + ' value=' + key + ' checked="checked"/>');
+        }else{
+            $tr.append($('<td>')).append('<input type=' + inputType + ' name=' + key + ' value=' + key + '/>');
+        }
+    }else if(inputType === "select"){
+        $tr.append($('<td>')).append('<select name=' + key + '>');
+        $sel = $tr.find("select");
+        for(var i = 0; i < enumList.length; i++){
+            if(elem[key]['default'] === enumList[i]){
+                $sel.append('<option value=' + enumList[i] + ' selected="selected">' + rDict[enumList[i]] + '</option>');
+            }else{
+                $sel.append('<option value=' + enumList[i] + '>' + rDict[enumList[i]] + '</option>');
+            }
+        }
+    }
+}
+
+function showFeedback(data){
+    data = JSON.parse(data);
+    if(data === 'success'){
+        $('#status').text('Done');
+    }else{
+        alert(data);
+    }
+}
+
+function setDefault(data){
+    $('#status').text('Processing...');
+    $.ajax({
+        type: "POST",
+        async:true,
+        contentType: "application/json; charset=utf-8",
+        url: "/set_default",
+        data: JSON.stringify(data),
+        success: function(data){
+            showFeedback(data);
+        },
+        dataType: "html"
+    });
 }
 
 $(document).ready(function(){
@@ -40,17 +132,9 @@ $(document).ready(function(){
     var reso = parseInt(prompt('分辨率:', '2048'));
 
     data = {'span': span, 'reso': reso};
-    $.ajax({
-        type: "POST",
-        async:true,
-        contentType: "application/json; charset=utf-8",
-        url: "/set_default",
-        data: JSON.stringify(data),
-        success: console.log('success'),
-        dataType: "html"
-    });
+    setDefault(data);
     
-    $("#nav ul li").click(function(e) {
+    $("#nav ul li").click(function(e){
       $(this).children("ul").slideToggle();
       e.stopPropagation();
     });
@@ -58,20 +142,12 @@ $(document).ready(function(){
     $('.chooseChildItem').click(function(){
         $('.listButton').hide();
         var chooseId = $(this).attr('id');
-        var chooseBaseId = $(this).parent().parent().attr('id');
         $('#setPara').attr('name', chooseId);
         var $table = $('#setPara');
         $table.empty();
-        var i = 0;
-        for(var key in classInheritDict[chooseBaseId]['subclasses'][chooseId]){
-            if(i % 2 === 0){
-                $table.append($('<tr>'));
-            }
-            var $tr = $table.children().first();
-            $tr.append($('<td>')).append('<label>' + rDict[key] + ':</label>');
-            $tr.append($('<td>')).append('<input type="text" name=' + key + ' value=' +  JSON.stringify(classInheritDict[chooseBaseId]['subclasses'][chooseId][key]) + '>');
-            i += 1;
-        }
+        var elem = {};
+        $.extend(true, elem, subClassesInfo[chooseId]['args']);
+        showElementParaPan(elem, $table);
         $('#add').show();
         return false;
     });
@@ -100,18 +176,22 @@ $(document).ready(function(){
             groupFlag = 1;
         }else if($('#setPara').attr('name') === 'groupEnd'){
             groupFlag = 3;
+        }else{
+            var className = $(this).siblings("table").attr('name');
+            var args = {};
+            $.extend(true, args, subClassesInfo[className]['args']);
+            var data = [className, args];
+            var $table = $('#setPara');
+            $table.find('input, select').each(function(){
+                data[1][$(this).attr('name')]['default'] = getInputValue($(this));
+            });
         }
-        var data = [$(this).siblings("table").attr('name'), {}];
-        var $table = $('#setPara');
-        $table.find('input').each(function(){
-            data[1][$(this).attr('name')] = $(this).val();
-        });
         if(groupFlag === 0){
-            elemListElement.push(data);
+            elemListForShow.push(data);
         }else if(groupFlag === 1){
-            elemListElement.push(new Array());
+            elemListForShow.push(new Array());
         }else if(groupFlag === 2){
-            elemListElement[elemListElement.length - 1].push(data);
+            elemListForShow[elemListForShow.length - 1].push(data);
         }else if(groupFlag === 3){
             groupFlag === 0;
         }
@@ -120,7 +200,7 @@ $(document).ready(function(){
         }else if(groupFlag === 3){
             groupFlag = 0;
         }
-        updateElemList(elemListElement, $('#elemList'));
+        updateDomElemList(elemListForShow, $('#elemList'));
         showElem();
     });
 
@@ -133,66 +213,61 @@ $(document).ready(function(){
         if($(this).parent().attr('class') === 'groupListElem'){
             var idx1 = $(this).index();
             var idx0 = $(this).parent().parent().index();
-            tempElem = elemListElement[idx1][idx2];
+            tempElem = elemListForShow[idx1][idx2];
             $('#change').attr('name', JSON.stringify([idx0, idx1]));
         }else{
             var idx = $(this).index();
-            tempElem = elemListElement[idx];
+            tempElem = elemListForShow[idx];
             $('#change').attr('name', JSON.stringify([idx]));
         }
         $table.attr('name', tempElem[0]);
-        var i = 0;
-        for(var key in tempElem[1]){
-            if(i % 2 === 0){
-                $table.append($('<tr>'));
-            }
-            i += 1;
-            var $tr = $table.children().first();
-            $tr.append($('<td>')).append('<label>' + rDict[key] + ':</label>');
-            $tr.append($('<td>')).append('<input type="text" name=' + key + ' value=' +  JSON.stringify(tempElem[1][key]) + '>');
-        }
+        showElementParaPan(tempElem[1], $table);
         return false;
     });
 
     $('#change').click(function(){
         var $table = $('#setPara');
         var idx = JSON.parse($('#change').attr('name'));
-        var data = [$(this).siblings("table").attr('name'), {}];
-        $table.find('input').each(function(){
-            data[1][$(this).attr('name')] = $(this).val();
+        var className = $(this).siblings("table").attr('name');
+        var args = {};
+        $.extend(true, args, subClassesInfo[className]['args']);
+        var data = [className, args];
+        $table.find('input, select').each(function(){
+            data[1][$(this).attr('name')]['default'] = getInputValue($(this));
         });
         if(idx.length === 1){
-            elemListElement[idx[0]] = data;
+            elemListForShow[idx[0]] = data;
         }else if(idx.length === 2){
-            elemListElement[idx[0]][idx[1]] = data;
+            elemListForShow[idx[0]][idx[1]] = data;
         }
-        updateElemList(elemListElement, $('#elemList'));
+        updateDomElemList(elemListForShow, $('#elemList'));
         showElem();
     });
 
     $('#del').live('click', function(){
         var idx = JSON.parse($('#change').attr('name'));
         if(idx.length === 1){
-            elemListElement.splice(idx[0], 1);
+            elemListForShow.splice(idx[0], 1);
         }else if(idx.length === 2){
-            elemListElement[idx[0]].splice(idx[1], 1);
-            if(elemListElement[idx[0]].length === 0){
-                elemListElement.splice(idx[0], 1);
+            elemListForShow[idx[0]].splice(idx[1], 1);
+            if(elemListForShow[idx[0]].length === 0){
+                elemListForShow.splice(idx[0], 1);
             }
         }
-        updateElemList(elemListElement, $('#elemList'));
+        updateDomElemList(elemListForShow, $('#elemList'));
         showElem();
     });
     
     $('#calc').click(function(){
+        $('#status').text('Processing...');
         $.ajax({
             type: "POST",
             async:true,
             contentType: "application/json; charset=utf-8",
             url: "/calc",
-            data: JSON.stringify(elemListElement),
+            data: JSON.stringify(elemListForShow),
             success: function(data){
-                console.log(data);
+                showFeedback(data);
                 updateThree();
             },
             dataType: "html"
@@ -207,8 +282,8 @@ $(document).ready(function(){
         update: function(event, ui){
             var startIdx = ui.item.data('startIdx');
             var endIdx = ui.item.index();
-            var temp = elemListElement.splice(startIdx, 1)[0];
-            elemListElement.splice(endIdx, 0, temp);
+            var temp = elemListForShow.splice(startIdx, 1)[0];
+            elemListForShow.splice(endIdx, 0, temp);
             showElem();
         }
     });

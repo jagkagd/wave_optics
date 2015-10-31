@@ -1,4 +1,3 @@
-var elemListElement = new Array()
 var threeList = new Array();
 var braceList = new Array();
 var ttlz = 0, w = 0;
@@ -11,12 +10,15 @@ function updateThree(){
         scene.remove(braceList[i]);
     }
     threeList = new Array();
-    for(var i = 0; i < elemListElement.length; i++){
+    braceList = new Array();
+    for(var i = 0; i < elemListForShow.length; i++){
         w = 0;
-        var m = createObject(i, elemListElement[i]);
+        var m = createObject(i, elemListForShow[i]);
+        if(m === 0){
+            continue;
+        }
         scene.add(m[0]);
         m[0].position.z = (ttlz + w) / 3;
-        console.log($.type(m[1]));
         if($.type(m[1]) !== 'string'){
             scene.add(m[1]);
             m[1].position.z = (ttlz + w) / 3;
@@ -31,26 +33,25 @@ function updateThree(){
 function createObject(i, obj){
     var geom, material, map1;
     var geom1, material1, map2;
-
-    console.log(obj);
+    var mesh1;
     if(obj.length === 0){
-        
+        return 0;
     }else if($.inArray(obj[0], ['PlaneWave']) > -1){
         geom = new THREE.PlaneGeometry(50, 50);
         material = new THREE.MeshLambertMaterial();
-        var mesh1 = 'a';
+        mesh1 = 'a';
     }else if($.inArray(obj[0], ['SphereWave']) > -1){
         geom = new THREE.SphereGeometry(2);
         material = new THREE.MeshLambertMaterial();
-        w = parseInt(obj[1]['pos'][2]);
-        var mesh1 = 'a';
+        w = JSON.parse(obj[1]['pos']['default'])[2];
+        mesh1 = 'a';
     }else if($.inArray(obj[0], ['SimpleFreeSpace']) > -1){
         geom = new THREE.Geometry();
-        geom.vertices.push(new THREE.Vector3(0, 0, -obj[1]['z']));
+        geom.vertices.push(new THREE.Vector3(0, 0, -JSON.parse(obj[1]['z']['default'])));
         geom.vertices.push(new THREE.Vector3(0, 0, 0));
-        ttlz += parseInt(obj[1]['z']);
+        ttlz += JSON.parse(obj[1]['z']['default']);
         material = new THREE.LineBasicMaterial();
-        var mesh1 = 'a';
+        mesh1 = 'a';
     }else{
         geom = new THREE.PlaneGeometry(50, 50);
         map1 = new THREE.ImageUtils.loadTexture('/texture/' + i.toString() + '.png?' + parseInt(Math.random()*1000000+1).toString());
@@ -58,7 +59,7 @@ function createObject(i, obj){
         geom1 = new THREE.PlaneGeometry(50, 50);
         map2 = new THREE.ImageUtils.loadTexture('/static/brace.png');
         material1 = new THREE.MeshBasicMaterial({map: map2, side: THREE.DoubleSide, transparent: true});
-        var mesh1 = new THREE.Mesh(geom1, material1);
+        mesh1 = new THREE.Mesh(geom1, material1);
     }
     var mesh = new THREE.Mesh(geom, material);
     return [mesh, mesh1];

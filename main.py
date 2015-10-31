@@ -15,27 +15,32 @@ config_path = 'config/'
 @app.route('/')
 def init():
     app.classList = classInherit
-    app.classListForJS = classInheritForJS
-    app.baseClassType = baseClassType
+    app.subClassesInfo = subClassesInfo
     app.replaceList = replaceList
-    return render_template('index.html', classInherit = app.classList, classInheritForJS = app.classListForJS, rDict = app.replaceList)
+    return render_template('index.html', classInherit = app.classList, 
+            subClassesInfoForJS = app.subClassesInfo, classInheritForJS = app.classList, rDict = app.replaceList)
 
 @app.route('/set_default', methods = ['POST'])
 def set_default():
-    data = json.loads(request.data)
-    with open(config_path + r'cfg.txt', 'wb') as f:
-        pickle.dump(data, f)
-    return 'success'
+    try:
+        data = json.loads(request.data)
+        with open(config_path + r'cfg.txt', 'wb') as f:
+            pickle.dump(data, f)
+        return json.dumps('success')
+    except Exception as e:
+        return json.dumps('error: ' + str(e))
 
 @app.route('/texture/<path:filename>', methods = ['GET', 'POST'])
 def send_pic(filename):
     return send_from_directory('./texture', filename)
 
 def parseItem(key, value):
-    if key in ['imgPath', 'express']:
-        return value
+    anno = value['annotation']
+    args = value['default']
+    if anno == 'str' or anno[0] == '|':
+        return args
     else:
-        return eval(value)
+        return json.loads(args)
 
 def parseData(data):
     elementList = []
@@ -54,27 +59,28 @@ def parseData(data):
 
 @app.route('/show', methods = ['POST'])
 def show():
-    data = json.loads(request.data)
-    elemList = parseData(data)
     try:
+        data = json.loads(request.data)
+        print(data)
+        elemList = parseData(data)
         elemList = [np.sum(i) for i in elemList]
         deleteImgs()
         [i.show(k) for (k, i) in enumerate(elemList)]
         return json.dumps('success')
-    except TypeError as e:
+    except Exception as e:
         return json.dumps('error: ' + str(e))
 
 @app.route('/calc', methods = ['POST'])
 def calc():
-    data = json.loads(request.data)
-    elemList = parseData(data)
     try:
+        data = json.loads(request.data)
+        elemList = parseData(data)
         elemList = [np.sum(i) for i in elemList]
         np.product(elemList)
         deleteImgs()
         [i.show(k) for (k, i) in enumerate(elemList)]
         return json.dumps('success')
-    except TypeError as e:
+    except Exception as e:
         return json.dumps('error: ' + str(e))
 
 def deleteImgs():

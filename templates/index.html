@@ -7,6 +7,7 @@
     <body>
         <script type="text/javascript">
             var classInheritDict = {{classInheritForJS|tojson}};
+            var subClassesInfo = {{subClassesInfoForJS|tojson}};
             var rDict = {{rDict|tojson}};
             var groupFlag = 0;
         </script>
@@ -21,7 +22,7 @@
             # for bc_key, bc_value in classInherit.items()
                 <li id='{{bc_key}}' class='chooseBaseItem'>{{rDict[bc_key]}}
                     <ul>
-                    # for c_key, c_value in bc_value['subclasses'].items()
+                    # for c_key, c_value in bc_value['subClasses'].items()
                         <li id='{{c_key}}' class='chooseChildItem'>{{rDict[c_key]}}</li>
                     # endfor
                     </ul>
@@ -45,6 +46,7 @@
         <div id='elemListWithButton'>
             <ul id='elemList'>已添加项：</ul>
             <button id='calc'>计算</button>
+            <p id='status'>Done</p>
         </div>
         <div id='three'></div>
     </body>

@@ -1,25 +1,24 @@
 # -*- coding:utf-8 -*-
 import numpy as np
 from numpy.fft import fft2, ifft2, fftshift
-#from pprint import pprint
 from PIL import Image
 import pickle
 from math import *
 import shutil
+from inspect import signature
+from pprint import pprint, pformat
+import json
 
 texture_path = 'texture/'
 config_path = 'config/'
 
-replaceList = {'SimpleScreen': '简单接收屏', 'SimpleFreeSpace': '简单自由空间传播', 'dist': '距离(mm)', 'WaveFront': '波面', 'amp': '振幅', 'lam': '波长(nm)', 'span': '尺寸(默认)(mm)', 'reso': '分辨率(默认)', 'WaveFrontGroup': '波组', 'PlaneWave': '平面波', 'angle': '传播方向([x, y, z])(mm)', 'SphereWave': '球面波', 'pos': '位置([x, y, z])(mm)', 'inOrOut': '发散(1)/收缩(-1)', 'WaveFliter': '滤波器', 'Len': '透镜', 'f': '焦距(mm)', 'ExpressFliter': '任意表达式滤波器', 'express': '表达式', 'Aperture': '光阑', 'SquareAperture': '矩形光阑', 'xspan': '孔水平长度(mm)', 'yspan': '孔竖直长度(mm)', 'center': '中心([u, v])', 'CircleAperture': '圆形光阑', 'r': '半径(mm)', 'reverse': '中心透光(0)/周围透光(1)', 'MultiSplitAperture': '多缝', 'a': '缝宽(mm)', 'd': '缝间距(mm)', 'num': '缝数', 'FresnelPlateAperture': '菲涅尔波带片', 'evenOrOdd': '偶数片(0)/奇数片(1)', 'roundOrSquare': '圆形(1)/方形(0)', 'ImageAperture': '图像光阑', 'imgPath': '路径', 'Screen': '接收屏', 'thr': '阈值', 'FreeSpace': '自由空间传播', 'z': '传播距离(mm)', 'useLog': '线性显示(0)/对数显示(1)'}
+replaceList = {'SimpleScreen': '简单接收屏', 'SimpleFreeSpace': '简单自由空间传播', 'dist': '距离(mm)', 'WaveFront': '波面', 'amp': '振幅', 'lam': '波长(nm)', 'span': '尺寸(默认)(mm)', 'reso': '分辨率(默认)', 'WaveFrontGroup': '波组', 'PlaneWave': '平面波', 'angle': '传播方向([x, y, z])(mm)', 'SphereWave': '球面波', 'pos': '位置([x, y, z])(mm)', 'inOrOut': '发散(√)/收缩', 'WaveFliter': '滤波器', 'Len': '透镜', 'f': '焦距(mm)', 'ExpressFliter': '任意表达式滤波器', 'express': '表达式', 'Aperture': '光阑', 'SquareAperture': '矩形光阑', 'xspan': '孔水平长度(mm)', 'yspan': '孔竖直长度(mm)', 'center': '中心([u, v])', 'CircleAperture': '圆形光阑', 'r': '半径(mm)', 'inner': '中心透光(√)/周围透光', 'MultiSplitAperture': '多缝', 'a': '缝宽(mm)', 'd': '缝间距(mm)', 'num': '缝数', 'FresnelPlateAperture': '菲涅尔波带片', 'evenOrOdd': '偶数片(√)/奇数片', 'shape': '形状', 'round': '圆形', 'square': '方形', 'ImageAperture': '图像光阑', 'imgPath': '路径', 'Screen': '接收屏', 'thr': '阈值', 'FreeSpace': '自由空间传播', 'z': '传播距离(mm)', 'useLog': '对数显示(√)/线性显示'}
 
 class Element:
     def __init__(self):
         default = self.getSpanAndReso()
         self.span = default['span']
         self.reso = default['reso']
-        #self.fftFactor = self.reso**2 / 2
-        self.milo = 1e3
-        self.fftFactor = 1
     def getSpanAndReso(self):
         with open(config_path + r'cfg.txt', 'rb') as f:
             temp = pickle.load(f)
@@ -38,12 +37,15 @@ class Identity(Element):
         im.save(texture_path + str(i) + r'.png', 'PNG')
 
 class WaveFront(Element):
-    def __init__(self, amp, lam):
+    def __init__(self, amp: float = 1, lam: float = 1000):
         super().__init__()
         self.amp = amp
         self.lam = lam * 1e-6
         self.k = 2 * np.pi / self.lam
         self.x, self.y = np.mgrid[-self.span: self.span: self.reso*1j, -self.span: self.span: self.reso*1j]
+        #self.fftFactor = self.reso**2 / 2
+        self.milo = 1e3
+        self.fftFactor = 1
         self.thr = 0
     def transport(self, freeSpace):
         z = freeSpace.z
@@ -168,13 +170,13 @@ class WaveFrontGroup:
         im.save(texture_path + str(i) + r'.png', 'PNG')
 
 class PlaneWave(WaveFront):
-    def __init__(self, amp, lam, angle):
+    def __init__(self, amp: float = 1, lam: float = 1000, angle: [float, float, float] = [0, 0, 1]):
         super().__init__(amp, lam)
         self.angle = angle / np.sqrt(sum([i**2 for i in angle]))
         self.waveFront = np.exp(1j * self.k * (self.angle[0]*self.x + self.angle[1]*self.y))
 
 class SphereWave(WaveFront):
-    def __init__(self, amp, lam, pos, inOrOut = 1):
+    def __init__(self, amp: float = 1, lam: float = 1000, pos: [float, float, float] = [0, 0, 0], inOrOut: bool = True):
         super().__init__(amp, lam)
         self.inOrOut = inOrOut
         self.pos = pos
@@ -195,7 +197,7 @@ class WaveFliter(Element):
         pass
 
 class Len(WaveFliter):
-    def __init__(self, f):
+    def __init__(self, f: float = 500):
         super().__init__()
         self.f = f
         self.opd = -(self.x**2+self.y**2) / (2*self.f)
@@ -203,7 +205,7 @@ class Len(WaveFliter):
         shutil.copy(r'static/len.png', texture_path + str(i) + r'.png')
 
 class ExpressFliter(WaveFliter):
-    def __init__(self, express):
+    def __init__(self, express: str = 'sin(x*y)'):
         super().__init__()
         self.express = express
         self.func = np.vectorize(eval('lambda x, y:' + express))
@@ -231,7 +233,7 @@ class Aperture(Element):
         pass
 
 class SquareAperture(Aperture):
-    def __init__(self, xspan, yspan, center):
+    def __init__(self, xspan: float = 1, yspan: float = 1, center: [float, float] = [0, 0]):
         super().__init__()
         self.xspan = xspan
         self.yspan = yspan
@@ -240,19 +242,19 @@ class SquareAperture(Aperture):
         self.stop = np.logical_and(np.abs(self.x-self.u) < xspan, np.abs(self.y-self.v) < yspan)
 
 class CircleAperture(Aperture):
-    def __init__(self, r, center, reverse = 0):
+    def __init__(self, r: float = 1, center: [float, float] = [0, 0], inner: bool = True):
         super().__init__()
         self.center = center
         self.u, self.v = self.center
         self.r = r
-        self.reverse = reverse
-        if not reverse:
+        self.inner = inner
+        if inner:
             self.stop = ((self.x-self.u)**2 + (self.y-self.v)**2) < r**2
         else:
             self.stop = ((self.x-self.u)**2 + (self.y-self.v)**2) > r**2
 
 class MultiSplitAperture(Aperture):
-    def __init__(self, a, d, num):
+    def __init__(self, a: float = 0.1, d: float = 1, num: int = 3):
         super().__init__()
         self.a = a
         self.d = d
@@ -274,38 +276,38 @@ class MultiSplitAperture(Aperture):
         im.save(texture_path + str(i) + r'.png', 'PNG')
 
 class FresnelPlateAperture(Aperture):
-    def __init__(self, dist, lam, r, evenOrOdd, roundOrSquare):
+    def __init__(self, dist: float = 100, lam: float = 1000, r: float = 1, evenOrOdd: bool = True, shape: '|round|square' = 'round'):
         super().__init__()
         lam = lam * 1e-6
         self.dist = dist
         self.r = r
         self.lam = lam
         self.evenOrOdd = evenOrOdd
-        self.roundOrSquare = roundOrSquare
-        n = int(2 * (np.sqrt(dist**2 + r**2) - dist) / lam) + 1
-        if roundOrSquare:
-            foo = lambda x, y: np.sqrt(x**2 + y**2)
-        else:
-            foo = lambda x, y: abs(x) if abs(x) > abs(y) else abs(y)
+        self.shape= shape
+        n = int(2 * (np.sqrt(dist**2 + r**2)-dist) / lam) + 1
+        shapeLambda = {}
+        shapeLambda['round'] = lambda x, y: np.sqrt(x**2 + y**2)
+        shapeLambda['square'] = lambda x, y: abs(x) if abs(x) > abs(y) else abs(y)
+        foo = shapeLambda[shape]
         foo = np.vectorize(foo)
         d = foo(self.x, self.y)
         self.stop = np.zeros_like(self.x)
         self.stop[d < r] = 1
-        for i in range(evenOrOdd, n, 2):
+        for i in range(int(evenOrOdd), n, 2):
             r1 = np.sqrt((dist + i*lam/2)**2 - dist**2)
             r2 = np.sqrt((dist + (i+1)*lam/2)**2 - dist**2)
             index = np.logical_and(d > r1 , d < r2)
             self.stop[index] = 0
 
 class ImageAperture(Aperture):
-    def __init__(self, imgPath):
+    def __init__(self, imgPath: str = ''):
         super().__init__()
         self.imgPath = imgPath
-        img = np.asarray(Image.open(self.imgPath), dtype = np.uint8).T
+        img = np.asarray(Image.open(self.imgPath), dtype=np.uint8).T
         self.stop = img.copy() / 255
 
 class Screen(Element):
-    def __init__(self, thr = 0, useLog = 0):
+    def __init__(self, thr: float = 1, useLog: bool = False):
         super().__init__()
         self.thr = thr
         self.useLog = useLog
@@ -314,7 +316,7 @@ class Screen(Element):
     def show(self, i):
         if self.thr != 0:
             self.I[self.I > self.thr*np.max(self.I)] = self.thr * np.max(self.I)
-        if self.useLog != 0:
+        if self.useLog:
             self.I = np.log(self.I + 1)
         im = Image.fromarray(self.I / np.max(self.I) * 255)
         im = im.convert('RGB')
@@ -323,59 +325,55 @@ class Screen(Element):
         pass
         
 class SimpleScreen(Screen):
-    def __init__(self, thr = 0, useLog = 0):
+    def __init__(self, thr: float = 1, useLog: bool = False):
         super().__init__(thr, useLog)
 
-class FreeSpace:
-    def __init__(self, z):
+class FreeSpace(Element):
+    def __init__(self, z: float = 0):
         self.z = z
     def show(self, i):
         pass
 
 class SimpleFreeSpace(FreeSpace):
-    def __init__(self, z):
+    def __init__(self, z: float = 0):
         super().__init__(z)
 
 class Data:
     pass
 
-baseClassType = ['Aperture', 'WaveFront', 'WaveFliter', 'FreeSpace', 'Screen', 'WaveFrontGroup']
-classInherit = {}
-classInheritForJS = {}
-for b in baseClassType:
-    classInherit[b] = {'arg':[], 'paras':{}, 'subclasses':{}}
-    classInheritForJS[b] = {'paras':{}, 'subclasses':{}}
+def createClassInherit(baseClassName):
+    res = { 'args': inspectElementArgs(baseClassName),
+            'subClasses': {subClass.__name__: createClassInherit(subClass.__name__) for subClass in eval(baseClassName).__subclasses__() if subClass.__name__ != 'Identity'}}
+    return res
 
-importList = dir()
-for c in importList:
-    if type(eval(c)).__name__ == 'type' and eval(c).__name__ in baseClassType:
-        argList = list(reversed(eval(c).__init__.__code__.co_varnames[1:eval(c).__init__.__code__.co_argcount]))
-        classInherit[eval(c).__name__]['arg'] = argList
-        defaultArg = []
-        if eval(c).__init__.__defaults__:
-            defaultArg = list(reversed(eval(c).__init__.__defaults__))
-        for (i, arg) in enumerate(argList):
-            classInherit[eval(c).__name__]['paras'][arg] = Data()
-            if i < len(defaultArg):
-                classInherit[eval(c).__name__]['paras'][arg].para = defaultArg[i]
-                classInheritForJS[eval(c).__name__]['paras'][arg] = defaultArg[i]
-            else:
-                classInherit[eval(c).__name__]['paras'][arg].para = 0
-                classInheritForJS[eval(c).__name__]['paras'][arg] = 0
-    elif type(eval(c)).__name__ == 'type' and eval(c).__bases__[0].__name__ in baseClassType:
-        classInherit[eval(c).__bases__[0].__name__]['subclasses'][eval(c).__name__] = {}
-        classInheritForJS[eval(c).__bases__[0].__name__]['subclasses'][eval(c).__name__] = {}
-        argList = list(reversed(eval(c).__init__.__code__.co_varnames[1:eval(c).__init__.__code__.co_argcount]))
-        classInherit[eval(c).__bases__[0].__name__]['subclasses'][eval(c).__name__]['arg'] = argList
-        defaultArg = []
-        if eval(c).__init__.__defaults__:
-            defaultArg = list(reversed(eval(c).__init__.__defaults__))
-        for (i, arg) in enumerate(argList):
-            classInherit[eval(c).__bases__[0].__name__]['subclasses'][eval(c).__name__][arg] = Data()
-            if i < len(defaultArg):
-                classInherit[eval(c).__bases__[0].__name__]['subclasses'][eval(c).__name__][arg].para = defaultArg[i]
-                classInheritForJS[eval(c).__bases__[0].__name__]['subclasses'][eval(c).__name__][arg] = defaultArg[i]
-            else:
-                classInherit[eval(c).__bases__[0].__name__]['subclasses'][eval(c).__name__][arg].para = 0
-                classInheritForJS[eval(c).__bases__[0].__name__]['subclasses'][eval(c).__name__][arg] = 0
+def inspectElementArgs(className):
+    sig = signature(eval(className).__init__)
+    argDict = {}
+    for key in sig.parameters:
+        if key != 'self':
+            argDict[key] = {}
+            argDict[key]['annotation'] = transAnnotation(sig.parameters[key].annotation)
+            argDict[key]['default'] = json.dumps(sig.parameters[key].default)
+    return argDict
 
+def transAnnotation(anno):
+    if type(anno).__name__ == 'type':
+        res = anno.__name__
+    elif type(anno).__name__ == 'list':
+        res = []
+        for item in anno:
+            res.append(transAnnotation(item))
+    elif type(anno).__name__ == 'str':
+        res = anno
+    return res
+
+classInherit = {'Element': createClassInherit('Element')}
+with open('class.txt', 'wt') as f:
+    f.write(pformat(classInherit, width = 200, depth = 10))
+classInherit = classInherit['Element']['subClasses']
+subClassesInfo = {}
+for key, value in classInherit.items():
+    for k, v in value['subClasses'].items():
+        subClassesInfo[k] = v
+with open('subclass.txt', 'wt') as f:
+    f.write(pformat(subClassesInfo, width = 200, depth = 10))
