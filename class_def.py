@@ -6,7 +6,6 @@ import pickle
 from math import *
 import shutil
 from inspect import signature
-from pprint import pprint, pformat
 import json
 
 texture_path = 'texture/'
@@ -368,12 +367,8 @@ def transAnnotation(anno):
     return res
 
 classInherit = {'Element': createClassInherit('Element')}
-with open('class.txt', 'wt') as f:
-    f.write(pformat(classInherit, width = 200, depth = 10))
 classInherit = classInherit['Element']['subClasses']
 subClassesInfo = {}
 for key, value in classInherit.items():
     for k, v in value['subClasses'].items():
         subClassesInfo[k] = v
-with open('subclass.txt', 'wt') as f:
-    f.write(pformat(subClassesInfo, width = 200, depth = 10))
