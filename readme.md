@@ -1,6 +1,7 @@
 使用说明
 --------
 
+1. 新版本和源代码可到https://github.com/jagkagd/wave_optics 上找。目前下载地址为http://pan.baidu.com/s/1c0CyBks 。
 1. 支持64位系统win8, win7(别的没试过)上的Firefox4.0+, Chrome9.0+, IE11+, Opera等浏览器(基于IE11的360浏览器，猎豹浏览器等其他浏览器也可以)，IE11以下可安装IEWebGL插件。如果不行就搜一下自己的浏览器是否支持WebGL。
 1. 先解压，打开 `wave_optics/exe.win-amd64-3.4` 下的 `main.exe` 文件(会出现一个黑框，可以不管它，但不能关掉)，接下来会在浏览器中弹出新标签即可使用(无需联网，只是用网页实现的界面)。
 1. 在左侧目录中选择元件，在右侧填好参数再点击添加按钮，在右下角的3D显示中拖动一下即可看到对应元件。
@@ -16,7 +17,6 @@
 1. 遇到错误或输出结果不合预期可刷新页面，再不行就关掉软件重来……如果你学过python那么可以从那个黑框里试着判断一下出错原因……
 1. 生成的图片在texture文件夹中(元件编号和图片名称对应)。
 1. 有问题和建议可发送邮件到391793779@qq.com中。
-1. 新版本可到https://github.com/jagkagd/wave_optics 上找。
 1. 本程序采用python的flask库作服务器端，numpy库负责计算，前台用html, css, javascript(jquery)等作界面，三维显示用three.js，模板引擎为jinja2。
 1. Good luck!
 
