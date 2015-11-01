@@ -352,7 +352,10 @@ def inspectElementArgs(className):
         if key != 'self':
             argDict[key] = {}
             argDict[key]['annotation'] = transAnnotation(sig.parameters[key].annotation)
-            argDict[key]['default'] = json.dumps(sig.parameters[key].default)
+            if argDict[key]['annotation'] == 'str' or argDict[key]['annotation'][0] == '|':
+                argDict[key]['default'] = sig.parameters[key].default
+            else:
+                argDict[key]['default'] = json.dumps(sig.parameters[key].default)
     return argDict
 
 def transAnnotation(anno):

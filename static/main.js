@@ -213,7 +213,7 @@ $(document).ready(function(){
         if($(this).parent().attr('class') === 'groupListElem'){
             var idx1 = $(this).index();
             var idx0 = $(this).parent().parent().index();
-            tempElem = elemListForShow[idx1][idx2];
+            tempElem = elemListForShow[idx0][idx1];
             $('#change').attr('name', JSON.stringify([idx0, idx1]));
         }else{
             var idx = $(this).index();
