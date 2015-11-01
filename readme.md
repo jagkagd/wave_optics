@@ -16,7 +16,7 @@
 - 遇到错误或输出结果不合预期可刷新页面，再不行就关掉软件重来……如果你学过python那么可以从那个黑框里试着判断一下出错原因……
 - 生成的图片在texture文件夹中(元件编号和图片名称对应)。
 - 有问题和建议可发送邮件到391793779@qq.com中。
-- 新版本可到https://github.com/jagkagd/wave_optics上找。
+- 新版本可到https://github.com/jagkagd/wave_optics 上找。
 - 本程序采用python的flask库作服务器端，numpy库负责计算，前台用html, css, javascript(jquery)等作界面，三维显示用three.js，模板引擎为jinja2。
 - Good luck!
 
