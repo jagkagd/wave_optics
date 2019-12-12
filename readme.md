@@ -1,7 +1,7 @@
 使用说明
 --------
 
-不再维护! (
+不再维护! No longer maintained!
 
 1. 新版本和源代码可到https://github.com/jagkagd/wave_optics 上找。目前下载地址为http://pan.baidu.com/s/1c0CyBks 。
 1. 支持64位系统win8, win7(别的没试过)上的Firefox4.0+, Chrome9.0+, IE11+, Opera等浏览器(基于IE11的360浏览器，猎豹浏览器等其他浏览器也可以)，IE11以下可安装IEWebGL插件。如果不行就搜一下自己的浏览器是否支持WebGL。
