@@ -11,7 +11,7 @@ import json
 texture_path = 'texture/'
 config_path = 'config/'
 
-replaceList = {'SimpleScreen': '简单接收屏', 'SimpleFreeSpace': '简单自由空间传播', 'dist': '距离(mm)', 'WaveFront': '波面', 'amp': '振幅', 'lam': '波长(nm)', 'span': '尺寸(默认)(mm)', 'reso': '分辨率(默认)', 'WaveFrontGroup': '波组', 'PlaneWave': '平面波', 'angle': '传播方向([x, y, z])(mm)', 'SphereWave': '球面波', 'pos': '位置([x, y, z])(mm)', 'inOrOut': '发散(√)/收缩', 'WaveFliter': '滤波器', 'Len': '透镜', 'f': '焦距(mm)', 'ExpressFliter': '任意表达式滤波器', 'express': '表达式', 'Aperture': '光阑', 'SquareAperture': '矩形光阑', 'xspan': '孔水平长度(mm)', 'yspan': '孔竖直长度(mm)', 'center': '中心([u, v])', 'CircleAperture': '圆形光阑', 'r': '半径(mm)', 'inner': '中心透光(√)/周围透光', 'MultiSplitAperture': '多缝', 'a': '缝宽(mm)', 'd': '缝间距(mm)', 'num': '缝数', 'FresnelPlateAperture': '菲涅尔波带片', 'evenOrOdd': '偶数片(√)/奇数片', 'shape': '形状', 'round': '圆形', 'square': '方形', 'ImageAperture': '图像光阑', 'imgPath': '路径', 'Screen': '接收屏', 'thr': '阈值', 'FreeSpace': '自由空间传播', 'z': '传播距离(mm)', 'useLog': '对数显示(√)/线性显示'}
+replaceList = {'SimpleScreen': '简单接收屏', 'SimpleFreeSpace': '简单自由空间传播', 'dist': '距离(mm)', 'WaveFront': '波面', 'amp': '振幅', 'lam': '波长(nm)', 'span': '尺寸(默认)(mm)', 'reso': '分辨率(默认)', 'WaveFrontGroup': '波组', 'PlaneWave': '平面波', 'angle': '传播方向([x, y, z])(mm)', 'SphereWave': '球面波', 'pos': '位置([x, y, z])(mm)', 'inOrOut': '发散/收缩', 'in': '收缩', 'out': '发散', 'WaveFliter': '滤波器', 'Len': '透镜', 'f': '焦距(mm)', 'ExpressFliter': '任意表达式滤波器', 'express': '表达式', 'Aperture': '光阑', 'SquareAperture': '矩形光阑', 'xspan': '孔水平长度(mm)', 'yspan': '孔竖直长度(mm)', 'center': '中心([u, v])', 'CircleAperture': '圆形光阑', 'r': '半径(mm)', 'innerOrOuter': '中心透光/周围透光', 'inner': '中心透光', 'outer': '周围透光', 'MultiSplitAperture': '多缝', 'a': '缝宽(mm)', 'd': '缝间距(mm)', 'num': '缝数', 'FresnelPlateAperture': '菲涅尔波带片', 'evenOrOdd': '偶数片/奇数片', 'even': '偶数', 'odd': '奇数', 'shape': '形状', 'round': '圆形', 'square': '方形', 'ImageAperture': '图像光阑', 'imgPath': '路径', 'Screen': '接收屏', 'thr': '阈值', 'FreeSpace': '自由空间传播', 'z': '传播距离(mm)', 'useLog': '对数显示/线性显示', 'linear': '线性', 'log': '对数'}
 
 class Element:
     def __init__(self):
@@ -175,9 +175,9 @@ class PlaneWave(WaveFront):
         self.waveFront = np.exp(1j * self.k * (self.angle[0]*self.x + self.angle[1]*self.y))
 
 class SphereWave(WaveFront):
-    def __init__(self, amp: float = 1, lam: float = 1000, pos: [float, float, float] = [0, 0, 0], inOrOut: bool = True):
+    def __init__(self, amp: float = 1, lam: float = 1000, pos: [float, float, float] = [0, 0, 0], inOrOut: '|in|out' = 'in'):
         super().__init__(amp, lam)
-        self.inOrOut = inOrOut
+        self.inOrOut = (inOrOut == 'in')
         self.pos = pos
         self.u, self.v, self.w = self.pos
         self.waveFront = np.exp(self.inOrOut*1j*self.k*np.sqrt((self.x-self.u)**2 + (self.y-self.v)**2 + self.w**2))
@@ -241,13 +241,13 @@ class SquareAperture(Aperture):
         self.stop = np.logical_and(np.abs(self.x-self.u) < xspan, np.abs(self.y-self.v) < yspan)
 
 class CircleAperture(Aperture):
-    def __init__(self, r: float = 1, center: [float, float] = [0, 0], inner: bool = True):
+    def __init__(self, r: float = 1, center: [float, float] = [0, 0], innerOrOuter: '|inner|outer' = 'inner'):
         super().__init__()
         self.center = center
         self.u, self.v = self.center
         self.r = r
-        self.inner = inner
-        if inner:
+        self.innerOrOuter = (innerOrOuter == 'inner')
+        if innerOrOuter:
             self.stop = ((self.x-self.u)**2 + (self.y-self.v)**2) < r**2
         else:
             self.stop = ((self.x-self.u)**2 + (self.y-self.v)**2) > r**2
@@ -275,13 +275,13 @@ class MultiSplitAperture(Aperture):
         im.save(texture_path + str(i) + r'.png', 'PNG')
 
 class FresnelPlateAperture(Aperture):
-    def __init__(self, dist: float = 100, lam: float = 1000, r: float = 1, evenOrOdd: bool = True, shape: '|round|square' = 'round'):
+    def __init__(self, dist: float = 100, lam: float = 1000, r: float = 1, evenOrOdd: '|even|odd' = 'even', shape: '|round|square' = 'round'):
         super().__init__()
         lam = lam * 1e-6
         self.dist = dist
         self.r = r
         self.lam = lam
-        self.evenOrOdd = evenOrOdd
+        self.evenOrOdd = (evenOrOdd == 'even')
         self.shape= shape
         n = int(2 * (np.sqrt(dist**2 + r**2)-dist) / lam) + 1
         shapeLambda = {}
@@ -292,7 +292,7 @@ class FresnelPlateAperture(Aperture):
         d = foo(self.x, self.y)
         self.stop = np.zeros_like(self.x)
         self.stop[d < r] = 1
-        for i in range(int(evenOrOdd), n, 2):
+        for i in range(int(self.evenOrOdd), n, 2):
             r1 = np.sqrt((dist + i*lam/2)**2 - dist**2)
             r2 = np.sqrt((dist + (i+1)*lam/2)**2 - dist**2)
             index = np.logical_and(d > r1 , d < r2)
@@ -306,10 +306,10 @@ class ImageAperture(Aperture):
         self.stop = img.copy() / 255
 
 class Screen(Element):
-    def __init__(self, thr: float = 1, useLog: bool = False):
+    def __init__(self, thr: float = 1, useLog: '|linear|log' = 'log'):
         super().__init__()
         self.thr = thr
-        self.useLog = useLog
+        self.useLog = useLog == 'log'
         self.gray = 150
         self.I = np.ones((self.reso, self.reso)) * self.gray
     def show(self, i):
@@ -324,7 +324,7 @@ class Screen(Element):
         pass
         
 class SimpleScreen(Screen):
-    def __init__(self, thr: float = 1, useLog: bool = False):
+    def __init__(self, thr: float = 1, useLog: '|linear|log' = 'linear'):
         super().__init__(thr, useLog)
 
 class FreeSpace(Element):

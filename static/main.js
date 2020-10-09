@@ -15,6 +15,8 @@ function getInputValue($item){
 
 function showElem(){
     $('#status').text('Processing...');
+    $('#status').removeClass('calc-success');
+    $('#status').addClass('calc-processing');
     console.log(elemListForShow);
     $.ajax({
         type: "POST",
@@ -35,7 +37,7 @@ function updateDomElemList(elementList, domElemList){
     for(var i=0; i<elementList.length; i++){
         data = elementList[i];
         if($.isEmptyObject(data) || $.type(data[0]) === "array"){
-            domElemList.append("<li class='elemListElem'>(<ul class='groupListElem'></ul>)</li>");
+            domElemList.append("<li class='elemListElem'><ul class='groupListElem'></ul></li>");
             subDomElemList = domElemList.find('ul').last();
             updateDomElemList(data, subDomElemList);
         }else if($.inArray(data[0], Object.keys(classInheritDict['FreeSpace']['subClasses'])) > -1){
@@ -50,17 +52,14 @@ function showElementParaPan(elem, $table){
     $table.empty();
     var i = 0;
     for(var key in elem){
-        if(i % 2 === 0){
-            $table.append($('<tr>'));
-        }
-        var $tr = $table.children().first();
+        $table.append('<div class="pure-u-1-3 pure-u-md-1-3">');
+        $tr = $table.children().last();
         showElementPara(elem, key, $tr);
-        i += 1;
     }
 }
 
 function showElementPara(elem, key, $tr){
-    $tr.append($('<td>')).append('<label>' + rDict[key] + ':</label>');
+    $tr.append('<label class="element-lable" for="' + key + '">' + rDict[key] + ':</label>');
     var keyType = elem[key]['annotation'];
     var inputType, enumList;
     if($.inArray(keyType, ['float', 'int', 'str']) > -1){
@@ -76,15 +75,16 @@ function showElementPara(elem, key, $tr){
         enumList = keyType.split('|').slice(1);
     }
     if($.inArray(inputType, ["text", "str"]) > -1){
-        $tr.append($('<td>')).append('<input type=' + inputType + ' name=' + key + ' value=' +  JSON.stringify(elem[key]['default']) + '>');
+        $tr.append('<input type=' + inputType + ' name=' + key + ' value=' +  JSON.stringify(elem[key]['default']) + '>');
     }else if(inputType === 'checkbox'){
         if(elem[key]['default'] === 'true'){
-            $tr.append($('<td>')).append('<input type=' + inputType + ' name=' + key + ' value=' + key + ' checked="checked"/>');
+            $tr.append('<input class="styled-checkbox" type=' + inputType + ' name=' + key + ' value=' + key + ' checked="checked"/>');
         }else{
-            $tr.append($('<td>')).append('<input type=' + inputType + ' name=' + key + ' value=' + key + '/>');
+            $tr.append('<input type=' + inputType + ' name=' + key + ' value=' + key + '/>');
         }
+        $tr.addClass('styled-checkbox-parent');
     }else if(inputType === "select"){
-        $tr.append($('<td>')).append('<select name=' + key + '>');
+        $tr.append('<select name=' + key + '>');
         $sel = $tr.find("select");
         for(var i = 0; i < enumList.length; i++){
             if(elem[key]['default'] === enumList[i]){
@@ -94,19 +94,28 @@ function showElementPara(elem, key, $tr){
             }
         }
     }
+    $tr.find('input, select').addClass('pure-u-23-24').attr('id', key);
 }
 
 function showFeedback(data){
     data = JSON.parse(data);
     if(data === 'success'){
         $('#status').text('Done');
+        $('#status').removeClass('calc-processing');
+        $('#status').addClass('calc-success');
     }else{
         alert(data);
+        $('#status').text('Fail');
+        $('#status').removeClass('calc-processing');
+        $('#status').addClass('calc-failed');
     }
 }
 
 function setDefault(data){
     $('#status').text('Processing...');
+    $('#status').addClass('calc-processing');
+    $('#status').removeClass('calc-success');
+    $('#status').removeClass('calc-failed');
     $.ajax({
         type: "POST",
         async:true,
@@ -122,8 +131,8 @@ function setDefault(data){
 
 $(document).ready(function(){
     var cnt = 0;
-    $('.addButton').hide();
-    $('.listButton').hide();
+    $('#add').hide();
+    $('.list-button').hide();
     $('#groupList').hide();
     $("#nav ul li ul").hide();
     $('#elemList').sortable();
@@ -140,7 +149,7 @@ $(document).ready(function(){
     });
 
     $('.chooseChildItem').click(function(){
-        $('.listButton').hide();
+        $('.list-button').hide();
         var chooseId = $(this).attr('id');
         $('#setPara').attr('name', chooseId);
         var $table = $('#setPara');
@@ -153,7 +162,7 @@ $(document).ready(function(){
     });
 
     $('#groupBegin').click(function(){
-        $('.listButton').hide();
+        $('.list-button').hide();
         $('#setPara').attr('name', 'groupBegin');
         var $table = $('#setPara');
         $table.empty();
@@ -162,7 +171,7 @@ $(document).ready(function(){
     });
 
     $('#groupEnd').click(function(){
-        $('.listButton').hide();
+        $('.list-button').hide();
         $('#setPara').attr('name', 'groupEnd');
         var $table = $('#setPara');
         $table.empty();
@@ -177,7 +186,7 @@ $(document).ready(function(){
         }else if($('#setPara').attr('name') === 'groupEnd'){
             groupFlag = 3;
         }else{
-            var className = $(this).siblings("table").attr('name');
+            var className = $('#setPara').attr('name');
             var args = {};
             $.extend(true, args, subClassesInfo[className]['args']);
             var data = [className, args];
@@ -206,8 +215,8 @@ $(document).ready(function(){
 
     $('.elemListElem').live('click', function(){
         $('#setPara').empty();
-        $('.addButton').hide();
-        $('.listButton').show();
+        $('#add').hide();
+        $('.list-button').show();
         var $table = $('#setPara')
         var tempElem;
         if($(this).parent().attr('class') === 'groupListElem'){
@@ -228,7 +237,7 @@ $(document).ready(function(){
     $('#change').click(function(){
         var $table = $('#setPara');
         var idx = JSON.parse($('#change').attr('name'));
-        var className = $(this).siblings("table").attr('name');
+        var className = $('#setPara').attr('name');
         var args = {};
         $.extend(true, args, subClassesInfo[className]['args']);
         var data = [className, args];
@@ -260,6 +269,7 @@ $(document).ready(function(){
     
     $('#calc').click(function(){
         $('#status').text('Processing...');
+        $('#calc').addClass('pure-button-disabled');
         $.ajax({
             type: "POST",
             async:true,
@@ -269,6 +279,7 @@ $(document).ready(function(){
             success: function(data){
                 showFeedback(data);
                 updateThree();
+                $('#calc').removeClass('pure-button-disabled');
             },
             dataType: "html"
         });

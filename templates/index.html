@@ -1,53 +1,67 @@
 <html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>波动光学模拟</title>
-        <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='sty.css')}}">
-    </head>
-    <body>
-        <script type="text/javascript">
-            var classInheritDict = {{classInheritForJS|tojson}};
-            var subClassesInfo = {{subClassesInfoForJS|tojson}};
-            var rDict = {{rDict|tojson}};
-            var groupFlag = 0;
-        </script>
-        <script type="text/javascript" src="{{url_for('static', filename='lib/jquery.min.js') }}"></script>
-        <script type="text/javascript" src="{{url_for('static', filename='lib/jquery-ui.min.js') }}"></script>
-        <script type="text/javascript" src="{{url_for('static', filename='lib/three.min.js') }}"></script>
-        <script type="text/javascript" src="{{url_for('static', filename='lib/control.js') }}"></script>
-        <script type="text/javascript" src="{{url_for('static', filename='main.js') }}"></script>
-        <script type="text/javascript" src="{{url_for('static', filename='showElement.js') }}"></script>
-        <div id='nav'>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>波动光学模拟</title>
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='sty.css')}}">
+    <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.3/build/pure-min.css" integrity="sha384-cg6SkqEOCV1NbJoCu11+bm0NvBRc8IYLRGXkmNrqUBfTjmMYwNKPWBTIKyw9mHNJ" crossorigin="anonymous">
+</head>
+
+<body>
+    <script type="text/javascript">
+        var classInheritDict = {{ classInheritForJS| tojson}};
+        var subClassesInfo = {{ subClassesInfoForJS| tojson}};
+        var rDict = {{ rDict| tojson}};
+        var groupFlag = 0;
+    </script>
+    <script type="text/javascript" src="{{url_for('static', filename='lib/jquery.min.js') }}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='lib/jquery-ui.min.js') }}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='lib/three.min.js') }}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='lib/control.js') }}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='main.js') }}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='showElement.js') }}"></script>
+    <div id='nav'>
         <ul>
             # for bc_key, bc_value in classInherit.items()
-                <li id='{{bc_key}}' class='chooseBaseItem'>{{rDict[bc_key]}}
-                    <ul>
-                    # for c_key, c_value in bc_value['subClasses'].items()
-                        <li id='{{c_key}}' class='chooseChildItem'>{{rDict[c_key]}}</li>
-                    # endfor
-                    </ul>
-                </li>
-            # endfor
-            <li>组
+            <li id='{{bc_key}}' class='chooseBaseItem'>
+                <a>{{rDict[bc_key]}}</a>
                 <ul>
-                    <li id='groupBegin' class='group'>组开始</li>
-                    <li id='groupEnd' class='group'>组结束</li>
+                    # for c_key, c_value in bc_value['subClasses'].items()
+                    <li id='{{c_key}}' class='chooseChildItem'>
+                        <a>{{rDict[c_key]}}</a>
+                    </li>
+                    # endfor
+                </ul>
+            </li>
+            # endfor
+            <li><a>组</a>
+                <ul>
+                    <li id='groupBegin' class='group'><a>组开始</a></li>
+                    <li id='groupEnd' class='group'><a>组结束</a></li>
                 </ul>
             </li>
         </ul>
-        </div>
+    </div>
+    <div id='attr-show'>
         <div id='paraPan'>
-            <table id='setPara'>
-            </table>
-            <button id='add' class='addButton'>添加</button>
-            <button id='change' class='listButton'>修改</button>
-            <button id='del' class='listButton'>删除</button>
+            <field id='setPara' class='pure-form pure-form-stacked'>
+                <fieldset>
+                    <div id='setParaSet' class='pure-g'></div>
+                </fieldset>
+            </field>
+        </div>
+        <div>
+            <button id='add' class='pure-button pure-button-primary'>添加</button>
+            <button id='change' class='list-button pure-button pure-button-primary'>修改</button>
+            <button id='del' class='list-button pure-button pure-button-primary'>删除</button>
         </div>
         <div id='elemListWithButton'>
-            <ul id='elemList'>已添加项：</ul>
-            <button id='calc'>计算</button>
-            <p id='status'>Done</p>
+            <p>已添加项：</p>
+            <ul id='elemList'></ul>
+            <button id='calc' class='pure-button'>计算</button>
+            <div id='status' class='calc-success pure-button'>Done</div>
         </div>
         <div id='three'></div>
-    </body>
+</body>
+
 </html>

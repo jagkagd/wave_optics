@@ -87,7 +87,7 @@ $(document).ready(function(){
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(w, h);
     renderer.render(scene, camera);
-    renderer.setClearColor(0x000000, 1.0);
+    renderer.setClearColor(0xeeeeee, 1.0);
     var container = document.getElementById('three');
     var controls = new THREE.OrbitControls( camera, container);
     controls.addEventListener('change', function(){renderer.render(scene, camera)});

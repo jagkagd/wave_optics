@@ -49,3 +49,8 @@ Temporary Items
 *.swp
 *.py~
 *.css~
+
+texture/
+__pycache__/
+setup.py/
+*.log

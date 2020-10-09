@@ -4,7 +4,6 @@ from jinja2 import Environment, PackageLoader
 import copy
 import time
 import pickle
-import webbrowser  
 import os
 
 app = Flask(__name__)
@@ -17,6 +16,7 @@ def init():
     app.classList = classInherit
     app.subClassesInfo = subClassesInfo
     app.replaceList = replaceList
+    os.mkdir('./texture')
     return render_template('index.html', classInherit = app.classList, 
             subClassesInfoForJS = app.subClassesInfo, classInheritForJS = app.classList, rDict = app.replaceList)
 
@@ -87,7 +87,3 @@ def deleteImgs():
     files = os.listdir('texture\\')
     for fileName in files:
         os.remove('texture\\' + fileName)
-
-if __name__ == '__main__':
-    webbrowser.open_new_tab("http://127.0.0.1:8000")  
-    app.run(port = 8000, debug = False)
